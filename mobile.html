@@ -2,22 +2,27 @@
 <html lang="zh-Hant">
 <head>
 <meta charset="UTF-8">
-<title>HTML快速檢視器</title>
+<title>簡易HTML編輯器</title>
 <style>
   body { 
     font-family: Arial, sans-serif; 
     margin: 0;
     display: flex;
-    flex-direction: column; /* 改為上下排列 */
+    flex-direction: column; /* 上下排列 */
     height: 100vh; /* 使用整個視窗高度 */
   }
   #editor { 
-    height: 50%; /* 分配給編輯器的高度為50% */
+    height: 30%; /* 分配給編輯器的高度為50% */
     width: 100%; /* 滿寬 */
     padding: 20px; /* 增加內邊距 */
     box-sizing: border-box; /* 包含邊框和內邊距在內的寬度計算方式 */
     border-top: 1px solid #ccc; /* 分隔線，現在放在上方 */
     resize: none; /* 防止調整大小 */
+    font-size: 16px; /* 設定文字大小 */
+  }
+  #editor::placeholder { /* 設定占位符的樣式 */
+    font-size: 36px; /* 占位符文字大小 */
+    color: #888; /* 占位符文字顏色 */
   }
   #iframe-container {
     flex: 1; /* 佔據剩餘空間 */
