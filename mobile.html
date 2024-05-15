@@ -2,7 +2,7 @@
 <html lang="zh-Hant">
 <head>
 <meta charset="UTF-8">
-<title>簡易HTML編輯器</title>
+<title>快速HTML檢視器</title>
 <style>
   body { 
     font-family: Arial, sans-serif; 
@@ -10,20 +10,16 @@
     display: flex;
     flex-direction: column;
     height: 100vh;
+    align-items: center; /* 中心對齊子元素 */
+    justify-content: center; /* 同樣中心對齊，確保內容垂直居中 */
   }
   #editor { 
-    height: 30%; /* 分配給編輯器的高度為50% */
+    flex: 1;
     width: 100%;
     padding: 10px;
     box-sizing: border-box;
-    border-top: 1px solid #ccc;
     resize: none;
-    overflow: auto;
-    font-size: 14px; /* 較小的字體大小適合手機閱讀 */
-  }
-  #editor::placeholder {
     font-size: 14px;
-    color: #888;
   }
   #iframe-container {
     flex: 1;
@@ -37,22 +33,57 @@
     height: 100%;
     border: none;
   }
+  #modal {
+    display: none; 
+    position: fixed;
+    z-index: 1;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    overflow: auto;
+    background-color: rgba(0,0,0,0.4);
+  }
+  #modal-content {
+    background-color: #fefefe;
+    margin: 10% auto;
+    padding: 20px;
+    border: 1px solid #888;
+    width: 90%; /* 調寬以適應更大的輸入框 */
+    max-width: 600px; /* 確保不會過大 */
+  }
+  #modal-input {
+    width: 100%; /* 輸入框滿寬 */
+    height: 200px; /* 增加輸入框的高度 */
+    padding: 10px;
+    font-size: 16px; /* 增加字體大小 */
+    box-sizing: border-box; /* 包含邊框和內邊距 */
+  }
+  #close {
+    color: #aaa;
+    float: right;
+    font-size: 28px;
+    font-weight: bold;
+  }
+  #close:hover,
+  #close:focus {
+    color: black;
+    text-decoration: none;
+    cursor: pointer;
+  }
+  button {
+    width: 100%;
+    margin-top: 20px;
+    font-size: 18px;
+    padding: 10px 20px;
+    background-color: gray;
+    color: white;
+    border: none;
 
-  /* 響應式布局調整 */
-  @media (max-width: 600px) {
-    body {
-      flex-direction: column; /* 在小螢幕上維持上下排列 */
-    }
-    #editor, #iframe-container {
-      flex: none;
-      height: 50vh; /* 在小螢幕上，編輯器和預覽區各占一半高度 */
-    }
-    #editor {
-      font-size: 16px; /* 增大字體以提高可讀性 */
-    }
-    #editor::placeholder {
-      font-size: 16px;
-    }
+    cursor: pointer;
+  }
+  button:hover {
+    background-color: pink;
   }
 </style>
 </head>
@@ -60,15 +91,37 @@
   <div id="iframe-container">
     <iframe id="preview"></iframe>
   </div>
-  <textarea id="editor" placeholder="貼上HTML原始碼..."></textarea>
+  <button onclick="openModal()">導入HTML</button>
+  <textarea id="editor" style="display:none;"></textarea> <!-- 隱藏原始的輸入框 -->
+
+  <!-- 模態框 -->
+  <div id="modal">
+    <div id="modal-content">
+      <span id="close" onclick="closeModal()">&times;</span>
+      <textarea id="modal-input" placeholder="貼上HTML原始碼..."></textarea>
+      <button onclick="loadHTML()">加載HTML</button>
+    </div>
+  </div>
 
   <script>
+    const modal = document.getElementById('modal');
+    const modalInput = document.getElementById('modal-input');
     const editor = document.getElementById('editor');
     const preview = document.getElementById('preview');
 
-    editor.addEventListener('input', function() {
+    function openModal() {
+      modal.style.display = "block";
+    }
+
+    function closeModal() {
+      modal.style.display = "none";
+    }
+
+    function loadHTML() {
+      editor.value = modalInput.value;
       preview.srcdoc = editor.value;
-    });
+      closeModal();
+    }
   </script>
 </body>
 </html>
