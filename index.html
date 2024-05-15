@@ -1,51 +1,44 @@
 <!DOCTYPE html>
 <html lang="zh-Hant">
 <head>
-<meta charset="UTF-8">
-<title>簡易HTML編輯器</title>
-<style>
-  body { 
-    font-family: Arial, sans-serif; 
-    margin: 0;
-    display: flex;
-    height: 100vh; /* 使用整個視窗高度 */
-  }
-  #editor { 
-    width: 50%; /* 設定編輯器寬度為50% */
-    height: 100%; /* 滿版高度 */
-    padding: 20px; /* 增加內邊距 */
-    box-sizing: border-box; /* 包含邊框和內邊距在內的寬度計算方式 */
-    border-right: 1px solid #ccc; /* 分隔線 */
-    resize: none; /* 防止調整大小 */
-  }
-  #iframe-container {
-    flex: 1; /* 佔據剩餘空間 */
-    height: 100%; /* 滿版高度 */
-    border: none; /* 移除邊框 */
-    overflow: auto; /* 內容過多時允許滾動 */
-    background-color: white; /* 背景設為白色 */
-    box-shadow: none; /* 移除陰影 */
-  }
-  iframe {
-    width: 100%;
-    height: 100%;
-    border: none;
-  }
-</style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>網頁快速檢視器</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+            margin-top: 50px;
+            background-color: #f0f0f0; /* Light grey background */
+        }
+        .button {
+            background-color: #555555; /* Dark grey background */
+            color: white; /* White text */
+            padding: 15px 32px;
+            text-align: center;
+            text-decoration: none;
+            display: inline-block;
+            font-size: 16px;
+            margin: 10px;
+            cursor: pointer;
+            border: none;
+            box-shadow: 0 8px 16px 0 rgba(0,0,0,0.2); /* Add shadow for 3D effect */
+            border-radius: 8px; /* Rounded corners */
+            transition: all 0.3s ease 0s;
+        }
+        .button:hover {
+            background-color: #6e6e6e; /* Slightly lighter grey for hover */
+            box-shadow: 0 12px 20px 0 rgba(0,0,0,0.3); /* Darker shadow for hover */
+        }
+    </style>
 </head>
 <body>
-  <textarea id="editor" placeholder="貼上HTML原始碼..."></textarea>
-  <div id="iframe-container">
-    <iframe id="preview"></iframe>
-  </div>
-
-  <script>
-    const editor = document.getElementById('editor');
-    const preview = document.getElementById('preview');
-
-    editor.addEventListener('input', function() {
-      preview.srcdoc = editor.value;
-    });
-  </script>
+    <h1>網頁快速檢視器<br><font size="5">htmlViewer</font></h1>
+    <a href="pc.html" class="button">PC版</a>
+    <a href="mobile.html" class="button">MOBILE版</a>
+<br>
+<br>
+<br>    
+<font size="1">TIDWORKER™</font>
 </body>
 </html>
