@@ -91,6 +91,8 @@
       <span id="close" onclick="closeModal()">&times;</span>
       <textarea id="modal-input" placeholder="貼上HTML原始碼..."></textarea>
       <button onclick="loadHTML()">加載HTML</button>
+      <button onclick="clearInput()">清除</button>
+      <button onclick="pasteHTML()">貼上</button>
     </div>
   </div>
 
@@ -112,6 +114,16 @@
       editor.value = modalInput.value;
       preview.srcdoc = editor.value;
       closeModal();
+    }
+
+    function clearInput() {
+      modalInput.value = '';
+    }
+
+    function pasteHTML() {
+      navigator.clipboard.readText().then(text => {
+        modalInput.value = text;
+      });
     }
   </script>
 </body>
