@@ -44,23 +44,23 @@
     </table>
 
     <script>
-        function loadOrders() {
-            var orders = JSON.parse(localStorage.getItem('orders'));
-            if (orders && orders.length > 0) {
-                var tableBody = document.getElementById('ordersTable').getElementsByTagName('tbody')[0];
-                orders.forEach(function(order) {
-                    var row = tableBody.insertRow();
-                    row.insertCell(0).innerHTML = order.name;
-                    row.insertCell(1).innerHTML = order.price;
-                    row.insertCell(2).innerHTML = order.quantity;
-                    row.insertCell(3).innerHTML = order.totalPrice;
-                });
-            } else {
-                document.body.innerHTML += '<p>目前沒有訂單資料。</p>';
-            }
-        }
+    document.addEventListener('DOMContentLoaded', function() {
+        var orders = JSON.parse(localStorage.getItem('orders'));
+        console.log(orders);  // 查看從 Local Storage 中讀取的數據
 
-        window.onload = loadOrders;
-    </script>
+        if (orders && orders.length > 0) {
+            var tableBody = document.getElementById('ordersTable').getElementsByTagName('tbody')[0];
+            orders.forEach(function(order) {
+                var row = tableBody.insertRow();
+                row.insertCell(0).textContent = order.name;
+                row.insertCell(1).textContent = order.price;
+                row.insertCell(2).textContent = order.quantity;
+                row.insertCell(3).textContent = order.totalPrice;
+            });
+        } else {
+            document.body.innerHTML += '<p>目前沒有訂單資料。</p>';
+        }
+    });
+</script>
 </body>
 </html>
