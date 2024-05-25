@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>查看訂單</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f7f7f7;
+            color: #333;
+            margin: 0;
+            padding: 20px;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+        th, td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: left;
+        }
+        th {
+            background-color: #4a4a4a;
+            color: white;
+        }
+    </style>
+</head>
+<body>
+    <h1>查看訂單</h1>
+    <table id="ordersTable">
+        <thead>
+            <tr>
+                <th>餐點名稱</th>
+                <th>單價</th>
+                <th>數量</th>
+                <th>總價</th>
+            </tr>
+        </thead>
+        <tbody>
+        </tbody>
+    </table>
+
+    <script>
+        function loadOrders() {
+            var orders = JSON.parse(localStorage.getItem('orders'));
+            if (orders && orders.length > 0) {
+                var tableBody = document.getElementById('ordersTable').getElementsByTagName('tbody')[0];
+                orders.forEach(function(order) {
+                    var row = tableBody.insertRow();
+                    row.insertCell(0).innerHTML = order.name;
+                    row.insertCell(1).innerHTML = order.price;
+                    row.insertCell(2).innerHTML = order.quantity;
+                    row.insertCell(3).innerHTML = order.totalPrice;
+                });
+            } else {
+                document.body.innerHTML += '<p>目前沒有訂單資料。</p>';
+            }
+        }
+
+        window.onload = loadOrders;
+    </script>
+</body>
+</html>
