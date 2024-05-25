@@ -1,0 +1,392 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>葉阿姨語音點餐系統</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f7f7f7;
+            color: #333;
+            margin: 0;
+            padding: 0;
+        }
+        header {
+            background-color: #4a4a4a;
+            color: white;
+            padding: 10px 0;
+            text-align: center;
+        }
+        main {
+            max-width: 800px;
+            margin: 20px auto;
+            padding: 20px;
+            background-color: white;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            border-radius: 10px;
+        }
+        h1, h2 {
+            margin: 0 0 20px;
+            font-weight: normal;
+        }
+        label {
+            display: block;
+            margin-bottom: 10px;
+            font-size: 18px;
+        }
+        #inputTextArea, #outputTextArea {
+            width: 96%;
+            height: 80px;
+            margin-bottom: 20px;
+            border-radius: 5px;
+            border: 1px solid #ccc;
+            padding: 10px;
+            font-size: 14px;
+            resize: none;
+            background-color: #f9f9f9;
+        }
+        #clearBtn, #voiceBtn, #completeOrderBtn {
+            font-size: 14px;
+            padding: 10px 15px;
+            background-color: #6c757d;
+            color: #fff;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            margin-right: 5px;
+        }
+        #clearBtn {
+            background-color: #adb5bd;
+        }
+        #voiceBtn.recording {
+            background-color: #343a40; /* 按鈕激活時的顏色 */
+        }
+        #completeOrderBtn {
+            background-color: #6c757d;
+            margin-top: 10px;
+        }
+        #orderTable {
+            border-collapse: collapse;
+            width: 100%;
+            margin-bottom: 20px;
+            font-size: 14px;
+        }
+        th, td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: left;
+        }
+        th {
+            background-color: #e9ecef;
+        }
+        .quantityBtn {
+            cursor: pointer;
+            font-size: 18px;
+            padding: 5px 10px;
+            background-color: #6c757d;
+            color: #fff;
+            border: none;
+            border-radius: 5px;
+            margin-right: 5px;
+        }
+        .deleteBtn {
+            cursor: pointer;
+            font-size: 18px;
+            padding: 5px 10px;
+            background-color: #adb5bd;
+            color: #fff;
+            border: none;
+            border-radius: 5px;
+            margin-right: 5px;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>葉阿姨語音點餐系統</h1>
+    </header>
+    <main>
+        <textarea id="inputTextArea" placeholder="點擊後開啟語音輸入..." oninput="analyzeText()"></textarea>
+        <button id="voiceBtn" onclick="startVoiceInput()">開始語音輸入</button>
+        <button id="clearBtn" onclick="clearText()">清除點餐</button>
+
+        <table id="orderTable">
+            <thead>
+                <tr>
+                    <th>餐點名稱</th>
+                    <th>單價</th>
+                    <th>數量</th>
+                    <th>總價</th>
+                    <th>操作</th>
+                </tr>
+            </thead>
+            <tbody id="orderTableBody">
+            </tbody>
+        </table>
+        <div>總金額：<span id="totalPrice">0</span>元</div>
+        <button id="completeOrderBtn" onclick="completeOrder()">完成訂單</button>
+    </main>
+
+    <script>
+        var itemPrices = {
+            "芝麻蔥油餅": 20,
+            "蔥油餅加蛋": 30,
+            "芝麻蔥油餅-加辣": 20,
+            "蔥油餅加蛋-加辣": 30,
+            "蛋餅加荷包蛋": 45,
+            "大腸麵線": 50,
+            "肉羹麵線": 50,
+            "綜合麵線": 50,
+            "清麵線": 40,
+            "純麵線": 40,
+            "大腸麵線-加辣": 50,
+            "肉羹麵線-加辣": 50,
+            "綜合麵線-加辣": 50,
+            "清麵線-加辣": 40,
+            "純麵線-加辣": 40,
+            "大炒麵": 40,
+            "小炒麵": 30,
+            "荷包蛋": 15,
+            "貢丸湯": 35,
+            "肉羹湯": 35,
+            "綜合湯": 35,  
+            "紅茶": 10,            
+            "奶茶": 15,
+            "豆漿": 15,
+            "米漿": 15
+,
+            // 其他餐點的單價繼續列在這裡
+        };
+
+        var homophones = {
+            "麵": ["面", "念", "唸"],
+            "線": ["鮮"],
+            "綜": ["中"],
+            "辣": ["拉","那"],
+            "合": ["和"],            
+            "清": ["青","金","新","稀"],
+            "炒": ["草", "早", "找","島"],
+            "芝麻蔥油餅": ["蔥油餅", "不加蛋","附加蛋"],
+            "蔥油餅加蛋": ["蛋餅", "加蛋"],
+            "蛋餅加荷包蛋": ["蛋蔥油餅加蛋"],
+            "大腸麵線": ["大腸","大腸麵線麵線"],
+            "綜合湯": ["綜合麵線湯"],
+            "綜合麵線": ["綜合","綜合麵線麵線"],
+            "肉羹麵線": ["肉羹","肉羹麵線麵線"],
+            "肉羹湯": ["肉羹麵線湯"],
+            "清麵線": ["清","清麵線麵線"],
+            "純麵線": ["純","純麵線麵線"],
+            "大炒麵": ["大炒","大炒麵麵","炒麵"],
+            "小炒麵": ["小炒","小大炒麵麵"], 
+            "荷包蛋": ["荷8蛋"],           
+            "蔥油餅加蛋-加辣": ["蔥油餅加蛋辣","蔥油餅加蛋加辣"],
+            "芝麻蔥油餅-加辣": ["芝麻蔥油餅加辣","芝麻蔥油餅辣"],
+            "大腸麵線-加辣": ["大腸麵線加辣","大腸麵線辣"],
+           "肉羹麵線-加辣": ["肉羹麵線加辣","肉羹麵線辣"],
+           "綜合麵線-加辣": ["綜合麵線加辣","綜合麵線辣"],
+           "清麵線-加辣": ["清麵線加辣","清麵線辣"],
+
+            "份": ["碗", "杯", "個","玩","顆","婉","晚","分","噸","完"],
+            "1": ["一", "億"],
+            "2": ["兩", "量","涼"],
+            "3": ["三", "參"],
+            "4": ["四", "是","試"],
+            "5": ["五", "無", "午"],
+            "6": ["六", "溜"],
+            "7": ["七", "妻"],
+            "8": ["八", "咖", "包"],
+            "9": ["九", "酒"],
+            "10": ["十", "時"]
+
+            // 其他同音字的資料
+        };
+
+        function simplifyHomophonesData(homophones) {
+            var simplifiedHomophones = {};
+            for (var key in homophones) {
+                if (homophones.hasOwnProperty(key)) {
+                    var values = homophones[key];
+                    if (values.length > 1) {
+                        simplifiedHomophones[key] = [values[0], values[values.length - 1]]; // 只保留第一行和最後一行
+                    } else {
+                        simplifiedHomophones[key] = values; // 如果只有一行，則全部保留
+                    }
+                }
+            }
+            return simplifiedHomophones;
+        }
+
+        function analyzeText() {
+            var inputText = document.getElementById('inputTextArea').value;
+            var matchedInfo = [];
+            var totalAmount = 0;
+
+            // 同音字修正
+            var simplifiedHomophones = simplifyHomophonesData(homophones);
+            for (var homophone in simplifiedHomophones) {
+                var homophoneArray = simplifiedHomophones[homophone];
+                for (var i = 0; i < homophoneArray.length; i++) {
+                    var pattern = new RegExp(homophoneArray[i], 'gi');
+                    inputText = inputText.replace(pattern, homophone);
+                }
+            }
+
+            // 商品計價邏輯
+            for (var item in itemPrices) {
+                var pattern = new RegExp(item + "\\s*(\\d+)份", 'gi');
+                inputText = inputText.replace(pattern, function(match, quantity) {
+                    quantity = parseInt(quantity);
+                    var totalPrice = quantity * itemPrices[item];
+                    addToMatchedInfo(matchedInfo, item, quantity, totalPrice);
+                    totalAmount += totalPrice;
+                    return ""; // 移除已處理的文字
+                });
+            }
+
+            // 更新訂單表格和總金額
+            updateOrderTable(matchedInfo, totalAmount);
+        }
+
+        function addToMatchedInfo(matchedInfo, item, quantity, totalPrice) {
+            var existingItem = matchedInfo.find(function(element) {
+                return element.name === item;
+            });
+
+            if (existingItem) {
+                existingItem.quantity += quantity;
+                existingItem.totalPrice += totalPrice;
+            } else {
+                matchedInfo.push({
+                    name: item,
+                    quantity: quantity,
+                    price: itemPrices[item],
+                    totalPrice: totalPrice
+                });
+            }
+        }
+
+        function updateOrderTable(matchedInfo, totalAmount) {
+            var tableBody = document.getElementById('orderTableBody');
+            tableBody.innerHTML = "";
+
+            matchedInfo.forEach(function(item) {
+                var row = tableBody.insertRow();
+                var nameCell = row.insertCell(0);
+                var priceCell = row.insertCell(1);
+                var quantityCell = row.insertCell(2);
+                var totalPriceCell = row.insertCell(3);
+                var actionCell = row.insertCell(4);
+
+                nameCell.innerHTML = item.name;
+                priceCell.innerHTML = item.price;
+                quantityCell.innerHTML = item.quantity;
+                totalPriceCell.innerHTML = item.totalPrice;
+
+                // 增加和減少數量的按鈕
+                var incrementBtn = document.createElement("button");
+                incrementBtn.innerHTML = "+";
+                incrementBtn.classList.add("quantityBtn");
+                incrementBtn.onclick = function() {
+                    item.quantity++;
+                    item.totalPrice += item.price;
+                    quantityCell.innerHTML = item.quantity;
+                    totalPriceCell.innerHTML = item.totalData.closePath();
+                    updateTotalPrice(matchedInfo);
+                };
+
+                var decrementBtn = document.createElement("button");
+                decrementBtn.innerHTML = "-";
+                decrementBtn.classList.add("quantityBtn");
+                decrementBtn.onclick = function() {
+                    if (item.quantity > 1) {
+                        item.quantity--;
+                        item.totalPrice -= item.price;
+                    quantityCell.innerHTML = item.quantity;
+                    totalPriceCell.innerHTML = item.totalPrice;
+                    updateTotalDate(matchedInfo);
+                };
+
+                // 刪除按鈕
+                var deleteBtn = document.createElement("button");
+                delete
+Btn.innerHTML = "刪除";
+                deleteBtn.classList.add("deleteBtn");
+                deleteBtn.onclick = function() {
+                    matchedInfo.splice(matchedInfo.indexOf(item), 1);
+                    row.remove();
+                    updateTotalPrice(matchedInfo);
+                };
+
+                actionCell.appendChild(decrementBtn);
+                actionCell.appendChild(incrementBtn);
+                actionCell.appendChild(deleteBtn);
+            });
+
+            updateTotalPrice(matchedInfo);
+        }
+
+        function updateTotalPrice(matchedInfo) {
+            var totalPriceSpan = document.getElementById('totalPrice');
+            var totalAmount = matchedInfo.reduce(function(acc, item) {
+                return acc + item.totalPrice;
+            }, 0);
+            totalPriceSpan.innerHTML = totalAmount;
+        }
+
+        function clearText() {
+            document.getElementById('inputTextArea').value = "";
+            document.getElementById('orderTableBody').innerHTML = "";
+            updateTotalPrice([]);
+        }
+
+        function completeOrder() {
+            // 將訂單資訊存儲到本地存儲
+            localStorage.setItem('orders', JSON.stringify(matchedInfo));
+            alert("訂單已完成，資訊已保存。");
+            clearText();
+        }
+
+        function startVoiceInput() {
+            const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+            if (!SpeechRecognition) {
+                alert("您的瀏覽器不支援語音識別功能，請使用最新的Chrome或Edge瀏覽器。");
+                return;
+            }
+
+            const recognition = new SpeechRecognition();
+            recognition.lang = 'zh-TW'; // 設置語言為中文(台灣)
+            const output = document.getElementById('inputTextArea');
+            var isRecording = false;
+
+            recognition.onstart = function() {
+                isRecording = true;
+                document.getElementById('voiceBtn').classList.add('recording');
+                document.getElementById('voiceBtn').textContent = '結束語音輸入';
+            };
+
+            recognition.onresult = function(event) {
+                const transcript = event.results[0][0].transcript;
+                output.value += transcript;
+                analyzeText();
+            };
+
+            recognition.onend = function() {
+                if (isRecording) {
+                    isRecording = false;
+                    document.getElementById('voiceBtn').classList.remove('recording');
+                    document.getElementById('voiceBtn').textContent = '開始語音輸入';
+                }
+            };
+
+            document.getElementById('voiceBtn').onclick = function() {
+                if (isRecording) {
+                    recognition.stop();
+                    return;
+                }
+                recognition.start();
+            };
+        }
+    </script>
+</body>
+</html>
