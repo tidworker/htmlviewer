@@ -35,7 +35,7 @@
             margin-bottom: 10px;
             font-size: 18px;
         }
-        #inputTextArea, #outputTextArea {
+        textarea {
             width: 96%;
             height: 80px;
             margin-bottom: 20px;
@@ -46,7 +46,7 @@
             resize: none;
             background-color: #f9f9f9;
         }
-        #clearBtn, #voiceBtn, #completeOrderBtn {
+        button {
             font-size: 14px;
             padding: 10px 15px;
             background-color: #6c757d;
@@ -60,13 +60,13 @@
             background-color: #adb5bd;
         }
         #voiceBtn.recording {
-            background-color: #343a40; /* 按鈕激活時的顏色 */
+            background-color: #343a40; /* Button active color */
         }
         #completeOrderBtn {
             background-color: #6c757d;
             margin-top: 10px;
         }
-        #orderTable {
+        table {
             border-collapse: collapse;
             width: 100%;
             margin-bottom: 20px;
@@ -80,9 +80,8 @@
         th {
             background-color: #e9ecef;
         }
-        .quantityBtn {
-            cursor: pointer;
-            font-size: 18px;
+        .quantityBtn, .deleteBtn {
+            font-size: 14px;
             padding: 5px 10px;
             background-color: #6c757d;
             color: #fff;
@@ -91,14 +90,7 @@
             margin-right: 5px;
         }
         .deleteBtn {
-            cursor: pointer;
-            font-size: 18px;
-            padding: 5px 10px;
             background-color: #adb5bd;
-            color: #fff;
-            border: none;
-            border-radius: 5px;
-            margin-right: 5px;
         }
     </style>
 </head>
@@ -129,170 +121,195 @@
     </main>
 
     <script>
-    var itemPrices = {
-        "芝麻蔥油餅": 20,
-        "蔥油餅加蛋": 30,
-        // 其餘菜單項目...
-    };
+        var itemPrices = {
+            "芝麻蔥油餅": 20,
+            "蔥油餅加蛋": 30,
+            "芝麻蔥油餅-加辣": 20,
+            "蔥油餅加蛋-加辣": 30,
+            "蛋餅加荷包蛋": 45,
+            "大腸麵線": 50,
+            "肉羹麵線": 50,
+            "綜合麵線": 50,
+            "清麵線": 40,
+            "純麵線": 40,
+            // 更多餐點項目...
+        };
 
-    var homophones = {
-        "麵": ["面", "念", "唸"],
-        "線": ["鮮"],
-        // 其餘同音字...
-    };
+        var homophones = {
+            "麵": ["面", "念", "唸"],
+            "線": ["鮮"],
+            // 更多同音字...
+        };
 
-    function simplifyHomophonesData(homophones) {
-        var simplifiedHomophones = {};
-        for (var key in homophones) {
-            if (homophones.hasOwnProperty(key)) {
-                var values = homophones[key];
-                if (values.length > 1) {
-                    simplifiedHomophones[key] = [values[0], values[values.length - 1]];
-                } else {
-                    simplifiedHomophones[key] = values;
+        function simplifyHomophonesData(homophones) {
+            var simplifiedHomophones = {};
+            for (var key in homophones) {
+                if (homophones.hasOwnProperty(key)) {
+                    var values = homophones[key];
+                    if (values.length > 1) {
+                        simplifiedHomophones[key] = [values[0], values[values.length - 1]];
+                    } else {
+                        simplifiedHomophones[key] = values;
+                    }
                 }
             }
+            return simplifiedHomophones;
         }
-        return simplifiedHomophones;
-    }
 
-    function analyzeText() {
-        var inputText = document.getElementById('inputTextArea').value;
-        var matchedInfo = [];
-        var totalAmount = 0;
+        function analyzeText() {
+            var inputText = document.getElementById('inputTextArea').value;
+            var matchedInfo = [];
+            var totalAmount = 0;
 
-        var simplifiedHomophones = simplifyHomophonesData(homophones);
-        for (var homophone in simplifiedHomophones) {
-            var homophoneArray = simplifiedHomophones[homophone];
-            for (var i = 0; i < homophoneArray.length; i++) {
-                var pattern = new RegExp(homophoneArray[i], 'gi');
-                inputText = inputText.replace(pattern, homophone);
+            var simplifiedHomophones = simplifyHomophonesData(homophones);
+            for (var homophone in simplifiedHomophones) {
+                var homophoneArray = simplifiedHomophones[homophone];
+                for (var i = 0; i < homophoneArray.length; i++) {
+                    var pattern = new RegExp(homophoneArray[i], 'gi');
+                    inputText = inputText.replace(pattern, homophone);
+                }
+            }
+
+            for (var item in itemPrices) {
+                var pattern = new RegExp(item + "\\s*(\\d+)份", 'gi');
+                inputText = inputText.replace(pattern, function(match, quantity) {
+                    quantity = parseInt(quantity);
+                    var totalPrice = quantity * itemPrices[item];
+                    addToMatchedInfo(matchedInfo, item, quantity, totalPrice);
+                    totalAmount += totalPrice;
+                    return "";
+                });
+            }
+
+            updateOrderTable(matchedInfo, totalAmount);
+        }
+
+        function addToMatchedInfo(matchedInfo, item, quantity, totalPrice) {
+            var existingItem = matchedInfo.find(element => element.name === item);
+            if (existingItem) {
+                existingItem.quantity += quantity;
+                existingItem.totalPrice += totalPrice;
+            } else {
+                matchedInfo.push({
+                    name: item,
+                    quantity: quantity,
+                    price: itemPrices[item],
+                    totalPrice: totalPrice
+                });
             }
         }
 
-        for (var item in itemPrices) {
-            var pattern = new RegExp(item + "\\s*(\\d+)份", 'gi');
-            inputText = inputText.replace(pattern, function(match, quantity) {
-                quantity = parseInt(quantity);
-                var totalPrice = quantity * itemPrices[item];
-                addToMatchedInfo(matchedInfo, item, quantity, totalPrice);
-                totalAmount += totalPrice;
-                return "";
+        function updateOrderTable(matchedInfo, totalAmount) {
+            var tableBody = document.getElementById('orderTableBody');
+            tableBody.innerHTML = "";
+            matchedInfo.forEach(function(item) {
+                var row = tableBody.insertRow();
+                row.insertCell(0).textContent = item.name;
+                row.insertCell(1).textContent = item.price;
+                row.insertCell(2).textContent = item.quantity;
+                row.insertCell(3).textContent = item.totalPrice;
+
+                var incrementBtn = document.createElement("button");
+                incrementBtn.textContent = "+";
+                incrementBtn.className = "quantityBtn";
+                incrementBtn.onclick = function() {
+                    item.quantity++;
+                    item.totalPrice += item.price;
+                    updateTotalPrice(matchedInfo);
+                };
+
+                var decrementBtn = document.createElement("button");
+                decrementBtn.textContent = "-";
+                decrementBtn.className = "quantityBtn";
+                decrementBtn.onclick = function() {
+                    if (item.quantity > 1) {
+                        item.quantity--;
+                        item.totalPrice -= item.price;
+                        updateTotalPrice(matchedInfo);
+                    }
+                };
+
+                var deleteBtn = document.createElement("button");
+                deleteBtn.textContent = "刪除";
+                deleteBtn.className = "deleteBtn";
+                deleteBtn.onclick = function() {
+                    matchedInfo.splice(matchedInfo.indexOf(item), 1);
+                    row.remove();
+                    updateTotalPrice(matchedInfo);
+                };
+var actionCell = row.insertCell(4);
+                actionCell.appendChild(decrementBtn);
+                actionCell.appendChild(incrementBtn);
+                actionConfigCell.appendChild(deleteBtn);
             });
+
+            updateTotalPrice(matchedInfo);
         }
 
-        updateOrderTable(matchedInfo, totalAmount);
-    }
-
-    function addToMatchedInfo(matchedInfo, item, quantity, totalPrice) {
-        var existingItem = matchedInfo.find(element => element.name === item);
-        if (existingItem) {
-            existingItem.quantity += quantity;
-            existingItem.totalPrice += totalPrice;
-        } else {
-            matchedInfo.push({
-                name: item,
-                quantity: quantity,
-                price: itemPrices[item],
-                totalPrice: totalPrice
-            });
-        }
-    }
-
-    function updateOrderTable(matchedInfo, totalAmount) {
-        var tableBody = document.getElementById('orderTableBody');
-        tableBody.innerHTML = "";
-        matchedInfo.forEach(item => {
-            var row = tableBody.insertRow();
-            row.insertCell(0).textContent = item.name;
-            row.insertCell(1).textContent = item.price;
-            row.insertCell(2).textContent = item.quantity;
-            row.insertCell(3).textContent = item.totalPrice;
-            var deleteBtn = document.createElement("button");
-            deleteBtn.textContent = "刪除";
-            deleteBtn.className = "deleteBtn";
-            deleteBtn.onclick = function() {
-                matchedInfo.splice(matchedInfo.indexOf(item), 1);
-                row.remove();
-                updateTotalPrice(matchedInfo);
-            };
-            row.insertCell(4).appendChild(deleteBtn);
-        });
-        updateTotalPrice(matchedInfo);
-    }
-
-    function updateTotalPrice(matchedInfo) {
-        var totalPrice = matchedInfo.reduce((acc, item) => acc + item.totalPrice, 0);
-        document.getElementById('totalPrice').textContent = totalPrice;
-    }
-
-    function startVoiceInput() {
-        var SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-        if (!SpeechRecognition) {
-            alert("您的瀏覽器不支持語音識別功能，請使用支持此功能的瀏覽器。");
-            return;
+        function updateTotalPrice(matchedInfo) {
+            var totalPriceSpan = document.getElementById('totalPrice');
+            var totalAmount = matchedInfo.reduce((acc, item) => acc + item.totalPrice, 0);
+            totalPriceSpan.textContent = totalAmount + '元';
         }
 
-        const recognition = new SpeechRecognition();
-        recognition.lang = 'zh-TW'; // 設定語音識別的語言為中文(台灣)
-        const output = document.getElementById('inputTextArea');
-        let isRecording = false;
+        function clearText() {
+            document.getElementById('inputTextArea').value = "";
+            document.getElementById('orderTableBody').innerHTML = "";
+            updateTotalPrice([]);
+        }
 
-        recognition.onstart = function() {
-            isRecording = true;
-            document.getElementById('voiceBtn').classList.add('recording');
-            document.getElementById('voiceBtn').textContent = '結束語音輸入';
-        };
-
-        recognition.onresult = function(event) {
-            const transcript = event.results[0][0].transcript;
-            output.value += transcript;
-            analyzeText(); // 自動處理轉換後的文字
-        };
-
-        recognition.onend = function() {
-            isRecording = false;
-            document.getElementById('voiceBtn').classList.remove('recording');
-            document.getElementById('voiceBtn').textContent = '開始語音輸入';
-        };
-
-        recognition.onerror = function(event) {
-            console.error('語音識別錯誤:', event.error);
-            let errorMessage = '語音識別錯誤，請重試。';
-            switch(event.error) {
-                case 'no-speech':
-                    errorMessage = '未偵測到語音，請再試一次。';
-                    break;
-                case 'audio-capture':
-                    errorMessage = '未能捕獲音頻，請檢查麥克風是否已啟用。';
-                    break;
-                case 'not-allowed':
-                    errorMessage = '語音識別被阻止，請檢查瀏覽器權限設置。';
-                    break;
-            }
-            alert(errorMessage);
-        };
-
-        document.getElementById('voiceBtn').onclick = function() {
-            if (isRecording) {
-                recognition.stop();
+        function completeOrder() {
+            if (matchedInfo.length === 0) {
+                alert("請先添加訂單項目。");
                 return;
             }
-            recognition.start();
-        };
-    }
+            localStorage.setItem('orders', JSON.stringify(matchedInfo));
+            window.location.href = 'list.html';  // 跳轉到訂單顯示頁面
+        }
 
-    function clearText() {
-        document.getElementById('inputTextArea').value = "";
-        document.getElementById('orderTableBody').innerHTML = "";
-        updateTotalPrice([]);
-    }
+        function startVoiceInput() {
+            const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+            if (!SpeechRecognition) {
+                alert("您的瀏覽器不支持語音識別功能，請使用支持此功能的瀏覽器。");
+                return;
+            }
 
-    function completeOrder() {
-        localStorage.setItem('orders', JSON.stringify(matchedInfo));
-        alert("訂單已完成，資訊已保存。");
-        clearText();
-    }
-</script>
+            const recognition = new SpeechRecognition();
+            recognition.lang = 'zh-TW';
+            const output = document.getElementById('inputTextArea');
+            var isRecording = false;
+
+            recognition.onstart = function() {
+                isRecording = true;
+                document.getElementById('voiceBtn').classList.add('recording');
+                document.getElementById('voiceBtn').textContent = '結束語音輸入';
+            };
+
+            recognition.onresult = function(event) {
+                const transcript = event.results[0][0].transcript;
+                output.value += transcript;
+                analyzeText();
+            };
+
+            recognition.onend = function() {
+                isRecording = false;
+                document.getElementById('voiceBtn').classList.remove('recording');
+                document.getElementById('voiceBtn').textContent = '開始語音輸入';
+            };
+
+            recognition.onerror = function(event) {
+                console.error('語音識別錯誤:', event.error);
+                alert('語音識別錯誤: ' + event.error);
+            };
+
+            document.getElementById('voiceBtn').onclick = function() {
+                if (isRecording) {
+                    recognition.stop();
+                } else {
+                    recognition.start();
+                }
+            };
+        }
+    </script>
 </body>
 </html>
