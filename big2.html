@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>大老二計分系統</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+            margin: 20px;
+            background-color: #F5F5F5;
+        }
+        .player-btn {
+            width: 200px;
+            margin: 10px auto;
+            padding: 15px;
+            color: white;
+            border: none;
+            cursor: pointer;
+            font-size: 16px;
+            border-radius: 5px;
+        }
+        .player-1 {
+            background-color: #8C9A78; /* 深莫蘭迪綠 */
+        }
+        .player-1:hover {
+            background-color: #6F7F5E;
+        }
+        .player-2 {
+            background-color: #B090A0; /* 深莫蘭迪紫 */
+        }
+        .player-2:hover {
+            background-color: #8E7283;
+        }
+        .player-3 {
+            background-color: #D2B282; /* 深莫蘭迪米黃 */
+        }
+        .player-3:hover {
+            background-color: #B9986A;
+        }
+        .player-4 {
+            background-color: #7A8FA1; /* 深莫蘭迪藍 */
+        }
+        .player-4:hover {
+            background-color: #5D6F80;
+        }
+        .settings-btn {
+            width: 200px;
+            margin: 20px auto;
+            padding: 15px;
+            background-color: #50597B; /* 深莫蘭迪灰藍 */
+            color: white;
+            border: none;
+            cursor: pointer;
+            font-size: 16px;
+            border-radius: 5px;
+        }
+        .settings-btn:hover {
+            background-color: #3C4462;
+        }
+        .container {
+            display: none;
+            margin-top: 20px;
+            padding: 20px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            background-color: #FFFFFF;
+        }
+        input[type="number"], input[type="text"] {
+            width: 80%;
+            margin: 10px auto;
+            padding: 10px;
+            font-size: 16px;
+        }
+        .multiplier-display {
+            font-size: 18px;
+            font-weight: bold;
+            margin: 20px 0;
+        }
+        button {
+            padding: 10px 15px;
+            margin: 10px;
+            font-size: 16px;
+            cursor: pointer;
+            border-radius: 5px;
+            border: none;
+        }
+        table {
+            margin: 20px auto;
+            width: 80%;
+            border-collapse: collapse;
+            background-color: #FFFFFF;
+        }
+        th, td {
+            border: 1px solid #ccc;
+            padding: 10px;
+            text-align: center;
+        }
+        th {
+            background-color: #EFEFEF;
+        }
+        .positive {
+            color: red;
+        }
+        .negative {
+            color: black;
+        }
+    </style>
+</head>
+<body>
+    <h1>大老二計分系統</h1>
+    <div id="mainContainer">
+        <button class="player-btn player-1" onclick="setWinner(0)">玩家 1</button>
+        <button class="player-btn player-2" onclick="setWinner(1)">玩家 2</button>
+        <button class="player-btn player-3" onclick="setWinner(2)">玩家 3</button>
+        <button class="player-btn player-4" onclick="setWinner(3)">玩家 4</button>
+        <div class="multiplier-display" id="multiplierDisplay">目前倍率：1</div>
+        <table>
+            <thead>
+                <tr>
+                    <th>回合</th>
+                    <th id="name0">玩家 1</th>
+                    <th id="name1">玩家 2</th>
+                    <th id="name2">玩家 3</th>
+                    <th id="name3">玩家 4</th>
+                </tr>
+            </thead>
+            <tbody id="scoreHistory"></tbody>
+            <tfoot>
+                <tr>
+                    <td>總分</td>
+                    <td id="total0">0</td>
+                    <td id="total1">0</td>
+                    <td id="total2">0</td>
+                    <td id="total3">0</td>
+                </tr>
+                <tr>
+                    <td>勝率</td>
+                    <td id="rate0">0%</td>
+                    <td id="rate1">0%</td>
+                    <td id="rate2">0%</td>
+                    <td id="rate3">0%</td>
+                </tr>
+            </tfoot>
+        </table>
+        <button class="settings-btn" onclick="openSettings()">遊戲設定</button>
+    </div>
+
+    <div id="inputContainer" class="container">
+        <h3>輸入玩家分數</h3>
+        <div id="inputFields"></div>
+        <button onclick="submitScores()">確認</button>
+        <button onclick="resetRound()">取消</button>
+    </div>
+
+    <div id="settingsContainer" class="container">
+        <h3>遊戲設定</h3>
+        <input id="playerName0" type="text" placeholder="玩家 1 名稱">
+        <input id="playerName1" type="text" placeholder="玩家 2 名稱">
+        <input id="playerName2" type="text" placeholder="玩家 3 名稱">
+        <input id="playerName3" type="text" placeholder="玩家 4 名稱">
+        <input id="multiplier" type="number" placeholder="計分倍率" min="1" value="1">
+        <button onclick="saveSettings()">儲存設定</button>
+        <button onclick="resetGame()">重置遊戲</button>
+    </div>
+
+    <script>
+        let scores = JSON.parse(localStorage.getItem("scores")) || [0, 0, 0, 0];
+        let winCounts = JSON.parse(localStorage.getItem("winCounts")) || [0, 0, 0, 0];
+        let roundNumber = JSON.parse(localStorage.getItem("roundNumber")) || 1;
+        let multiplier = JSON.parse(localStorage.getItem("multiplier")) || 1;
+        let playerNames = JSON.parse(localStorage.getItem("playerNames")) || ["玩家 1", "玩家 2", "玩家 3", "玩家 4"];
+        let currentWinner = null;
+
+        document.addEventListener("DOMContentLoaded", () => {
+            updatePlayerNames();
+            updateScoreTable();
+            updateMultiplierDisplay();
+        });
+
+        function openSettings() {
+            document.getElementById("mainContainer").style.display = "none";
+            document.getElementById("settingsContainer").style.display = "block";
+        }
+
+        function saveSettings() {
+            playerNames = [
+                document.getElementById("playerName0").value || "玩家 1",
+                document.getElementById("playerName1").value || "玩家 2",
+                document.getElementById("playerName2").value || "玩家 3",
+                document.getElementById("playerName3").value || "玩家 4"
+            ];
+            multiplier = parseInt(document.getElementById("multiplier").value) || 1;
+            localStorage.setItem("playerNames", JSON.stringify(playerNames));
+            localStorage.setItem("multiplier", multiplier);
+            updatePlayerNames();
+            updateMultiplierDisplay();
+            document.getElementById("mainContainer").style.display = "block";
+            document.getElementById("settingsContainer").style.display = "none";
+        }
+
+        function updateMultiplierDisplay() {
+            document.getElementById("multiplierDisplay").textContent = `目前倍率：${multiplier}`;
+        }
+
+        function updatePlayerNames() {
+            playerNames.forEach((name, index) => {
+                document.getElementById(`name${index}`).textContent = name;
+                document.querySelectorAll(".player-btn")[index].textContent = name;
+            });
+        }
+
+        function setWinner(winnerIndex) {
+            currentWinner = winnerIndex;
+            document.getElementById("mainContainer").style.display = "none";
+            document.getElementById("inputContainer").style.display = "block";
+            const inputFields = document.getElementById("inputFields");
+            inputFields.innerHTML = "";
+
+            playerNames.forEach((name, index) => {
+                if (index === winnerIndex) {
+                    const input = document.createElement("div");
+                    input.innerHTML = `
+                        <label class="name-label win-label">${name} - Win</label>
+                        <input id="winner${index}" type="text" value="Win" readonly>
+                    `;
+                    inputFields.appendChild(input);
+                } else {
+                    const input = document.createElement("div");
+                    input.innerHTML = `
+                        <label class="name-label name-${index + 1}">${name}</label>
+                        <input id="loss${index}" type="number" placeholder="輸入失分">
+                    `;
+                    inputFields.appendChild(input);
+                }
+            });
+        }
+
+        function submitScores() {
+            const roundScores = [0, 0, 0, 0];
+            let totalLoss = 0;
+
+            playerNames.forEach((_, index) => {
+                if (index !== currentWinner) {
+                    const loss = parseInt(document.getElementById(`loss${index}`).value) || 0;
+                    roundScores[index] = -loss * multiplier;
+                    totalLoss += loss * multiplier;
+                }
+            });
+
+            roundScores[currentWinner] = totalLoss;
+
+            // 更新分數
+            scores = scores.map((score, i) => score + roundScores[i]);
+            if (roundScores[currentWinner] > 0) winCounts[currentWinner]++;
+            roundNumber++;
+
+            // 儲存到 Local Storage
+            localStorage.setItem("scores", JSON.stringify(scores));
+            localStorage.setItem("winCounts", JSON.stringify(winCounts));
+            localStorage.setItem("roundNumber", roundNumber);
+
+            addRoundToHistory(roundScores);
+            updateScoreTable();
+            resetRound();
+        }
+
+        function addRoundToHistory(roundScores) {
+            const scoreHistory = document.getElementById("scoreHistory");
+            const row = document.createElement("tr");
+            row.innerHTML = `<td>回合 ${roundNumber - 1}</td>` + roundScores.map(score =>
+                `<td class="${score > 0 ? 'positive' : 'negative'}">${score}</td>`).join("");
+            scoreHistory.appendChild(row);
+        }
+
+        function updateScoreTable() {
+            scores.forEach((score, index) => {
+                document.getElementById(`total${index}`).textContent = score;
+                document.getElementById(`total${index}`).className = score > 0 ? "positive" : "negative";
+            });
+
+            const totalRounds = roundNumber - 1;
+            winCounts.forEach((count, index) => {
+                const winRate = totalRounds > 0 ? `${((count / totalRounds) * 100).toFixed(1)}%` : "0%";
+                document.getElementById(`rate${index}`).textContent = winRate;
+            });
+        }
+
+        function resetRound() {
+            document.getElementById("mainContainer").style.display = "block";
+            document.getElementById("inputContainer").style.display = "none";
+        }
+
+        function resetGame() {
+            localStorage.clear();
+            scores = [0, 0, 0, 0];
+            winCounts = [0, 0, 0, 0];
+            roundNumber = 1;
+            multiplier = 1;
+            playerNames = ["玩家 1", "玩家 2", "玩家 3", "玩家 4"];
+            updatePlayerNames();
+            updateMultiplierDisplay();
+            updateScoreTable();
+            document.getElementById("scoreHistory").innerHTML = "";
+            document.getElementById("mainContainer").style.display = "block";
+            document.getElementById("settingsContainer").style.display = "none";
+        }
+    </script>
+</body>
+</html>
