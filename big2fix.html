@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>修改大老二歷史記錄</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+            margin: 10px;
+            background-color: #F5F5F5;
+        }
+        table {
+            margin: 10px auto;
+            width: 100%;
+            border-collapse: collapse;
+            background-color: #FFFFFF;
+            font-size: 14px;
+        }
+        th, td {
+            border: 1px solid #ccc;
+            padding: 5px;
+            text-align: center;
+        }
+        th {
+            background-color: #EFEFEF;
+            font-size: 12px;
+        }
+        input[type="number"] {
+            width: 60px;
+            padding: 5px;
+            font-size: 12px;
+            text-align: center;
+        }
+        .btn {
+            margin: 5px;
+            padding: 8px 15px;
+            background-color: #007BFF;
+            color: white;
+            border: none;
+            cursor: pointer;
+            font-size: 14px;
+            border-radius: 5px;
+        }
+        .btn:hover {
+            background-color: #0056b3;
+        }
+        @media screen and (max-width: 600px) {
+            table {
+                font-size: 12px;
+            }
+            input[type="number"] {
+                width: 50px;
+                font-size: 10px;
+            }
+            .btn {
+                font-size: 12px;
+                padding: 5px 10px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <h1>修改大老二歷史記錄</h1>
+    <h3>歷史記錄</h3>
+    <table>
+        <thead>
+            <tr>
+                <th>回合</th>
+                <th id="playerNameHeader1">玩家 1</th>
+                <th id="playerNameHeader2">玩家 2</th>
+                <th id="playerNameHeader3">玩家 3</th>
+                <th id="playerNameHeader4">玩家 4</th>
+                <th>操作</th>
+            </tr>
+        </thead>
+        <tbody id="historyTable"></tbody>
+    </table>
+    <button class="btn" onclick="resetLocalStorage()">清除所有歷史記錄</button>
+    <button class="btn" onclick="goBack()">返回計分系統</button>
+
+    <script>
+        const history = JSON.parse(localStorage.getItem("history")) || [];
+        const playerNames = JSON.parse(localStorage.getItem("playerNames")) || ["玩家 1", "玩家 2", "玩家 3", "玩家 4"];
+
+        function loadHistoryData() {
+            // 更新表格標題以顯示玩家名稱
+            document.getElementById("playerNameHeader1").textContent = playerNames[0];
+            document.getElementById("playerNameHeader2").textContent = playerNames[1];
+            document.getElementById("playerNameHeader3").textContent = playerNames[2];
+            document.getElementById("playerNameHeader4").textContent = playerNames[3];
+
+            const historyTable = document.getElementById("historyTable");
+            historyTable.innerHTML = "";
+            history.forEach((round, index) => {
+                const row = document.createElement("tr");
+                row.innerHTML = `
+                    <td>回合 ${index + 1}</td>
+                    ${round.map((score, i) => `
+                        <td><input type="number" value="${score}" id="score${index}-${i}" /></td>
+                    `).join("")}
+                    <td><button onclick="saveRound(${index})" class="btn">儲存</button></td>
+                `;
+                historyTable.appendChild(row);
+            });
+        }
+
+        function saveRound(roundIndex) {
+            const updatedScores = [];
+            for (let i = 0; i < 4; i++) {
+                const scoreInput = document.getElementById(`score${roundIndex}-${i}`);
+                updatedScores.push(parseInt(scoreInput.value) || 0);
+            }
+            history[roundIndex] = updatedScores;
+            localStorage.setItem("history", JSON.stringify(history));
+            alert(`回合 ${roundIndex + 1} 的分數已更新！`);
+            loadHistoryData();
+        }
+
+        function resetLocalStorage() {
+            if (confirm("確定要清除所有歷史記錄？此操作無法復原！")) {
+                localStorage.removeItem("history");
+                alert("所有歷史記錄已清除！");
+                location.reload();
+            }
+        }
+
+        function goBack() {
+            window.location.href = "index.html"; // 返回計分系統主頁
+        }
+
+        document.addEventListener("DOMContentLoaded", () => {
+            loadHistoryData();
+        });
+    </script>
+</body>
+</html>
