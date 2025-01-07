@@ -118,16 +118,17 @@
         <button class="player-btn player-3" onclick="setWinner(2)">玩家 3</button>
         <button class="player-btn player-4" onclick="setWinner(3)">玩家 4</button>
         <h3>總分與勝率</h3>
-        <table>
-            <thead>
-                <tr>
-                    <th>玩家</th>
-                    <th>總分</th>
-                    <th>勝率</th>
-                </tr>
-            </thead>
-            <tbody id="totalScores"></tbody>
-        </table>
+<table>
+    <thead>
+        <tr>
+            <th>玩家</th>
+            <th>總分</th>
+            <th>勝場</th>
+            <th>勝率</th>
+        </tr>
+    </thead>
+    <tbody id="totalScores"></tbody>
+</table>
         <h3>最近兩場成績</h3>
         <table>
             <thead>
@@ -352,21 +353,21 @@ document.getElementById("inputContainer").style.display = "block";
 
     // 總分與最近兩場更新
     function updateTotalScores() {
-        const totalScoresTable = document.getElementById("totalScores");
-        totalScoresTable.innerHTML = "";
-        scores.forEach((score, index) => {
-            const winRate = roundNumber > 1 ? `${((winCounts[index] / (roundNumber - 1)) * 100).toFixed(1)}%` : "0%";
-            const row = document.createElement("tr");
-            row.innerHTML = `
-                <td>${playerNames[index]}</td>
-                <td class="${score > 0 ? 'positive' : 'negative'}">${score}</td>
-                <td>${winRate}</td>
-            `;
-            totalScoresTable.appendChild(row);
-        });
-        saveToLocalStorage();
-    }
-
+    const totalScoresTable = document.getElementById("totalScores");
+    totalScoresTable.innerHTML = "";
+    scores.forEach((score, index) => {
+        const winRate = roundNumber > 1 ? `${((winCounts[index] / (roundNumber - 1)) * 100).toFixed(1)}%` : "0%";
+        const row = document.createElement("tr");
+        row.innerHTML = `
+            <td>${playerNames[index]}</td>
+            <td class="${score > 0 ? 'positive' : 'negative'}">${score}</td>
+            <td>${winCounts[index]}</td>
+            <td>${winRate}</td>
+        `;
+        totalScoresTable.appendChild(row);
+    });
+    saveToLocalStorage();
+}
     function updateLatestScores() {
         const latestScoresTable = document.getElementById("latestScores");
         latestScoresTable.innerHTML = "";
