@@ -158,10 +158,10 @@
             <thead>
                 <tr>
                     <th>回合</th>
-                    <th id="playerNameResults1">玩家 1</th>
-                    <th id="playerNameResults2">玩家 2</th>
-                    <th id="playerNameResults3">玩家 3</th>
-                    <th id="playerNameResults4">玩家 4</th>
+                    <th>玩家 1</th>
+                    <th>玩家 2</th>
+                    <th>玩家 3</th>
+                    <th>玩家 4</th>
                 </tr>
             </thead>
             <tbody id="allScores"></tbody>
@@ -187,192 +187,196 @@
     <div class="overlay" id="overlay"></div>
 
 <script>
-        let scores = JSON.parse(localStorage.getItem("scores")) || [0, 0, 0, 0];
-        let winCounts = JSON.parse(localStorage.getItem("winCounts")) || [0, 0, 0, 0];
-        let roundNumber = JSON.parse(localStorage.getItem("roundNumber")) || 1;
-        let multiplier = JSON.parse(localStorage.getItem("multiplier")) || 1;
-        let playerNames = JSON.parse(localStorage.getItem("playerNames")) || ["玩家 1", "玩家 2", "玩家 3", "玩家 4"];
-        let history = JSON.parse(localStorage.getItem("history")) || [];
-        let currentWinner = null;
+    let scores = JSON.parse(localStorage.getItem("scores")) || [0, 0, 0, 0];
+    let winCounts = JSON.parse(localStorage.getItem("winCounts")) || [0, 0, 0, 0];
+    let roundNumber = JSON.parse(localStorage.getItem("roundNumber")) || 1;
+    let multiplier = JSON.parse(localStorage.getItem("multiplier")) || 1;
+    let playerNames = JSON.parse(localStorage.getItem("playerNames")) || ["玩家 1", "玩家 2", "玩家 3", "玩家 4"];
+    let history = JSON.parse(localStorage.getItem("history")) || [];
+    let currentWinner = null;
 
-        document.addEventListener("DOMContentLoaded", () => {
-            updatePlayerNames();
-            updateTotalScores();
-            updateLatestScores();
+    document.addEventListener("DOMContentLoaded", () => {
+        updatePlayerNames();
+        updateTotalScores();
+        updateLatestScores();
+    });
+
+    function saveToLocalStorage() {
+        localStorage.setItem("scores", JSON.stringify(scores));
+        localStorage.setItem("winCounts", JSON.stringify(winCounts));
+        localStorage.setItem("roundNumber", JSON.stringify(roundNumber));
+        localStorage.setItem("multiplier", multiplier);
+        localStorage.setItem("playerNames", JSON.stringify(playerNames));
+        localStorage.setItem("history", JSON.stringify(history));
+    }
+
+    // 更新玩家名稱
+    function updatePlayerNames() {
+        playerNames.forEach((name, index) => {
+            const button = document.querySelector(`.player-${index + 1}`);
+            if (button) button.textContent = name;
+
+            const header = document.getElementById(`playerNameHeader${index + 1}`);
+            if (header) header.textContent = name;
+
+            const resultsHeader = document.getElementById(`playerNameResults${index + 1}`);
+            if (resultsHeader) resultsHeader.textContent = name;
+        });
+    }
+
+    // 遊戲設定功能
+    function openSettingsModal() {
+        document.getElementById("settingsModal").style.display = "block";
+        document.getElementById("overlay").style.display = "block";
+
+        document.getElementById("playerName0").value = playerNames[0];
+        document.getElementById("playerName1").value = playerNames[1];
+        document.getElementById("playerName2").value = playerNames[2];
+        document.getElementById("playerName3").value = playerNames[3];
+        document.getElementById("multiplier").value = multiplier;
+    }
+
+    function closeSettingsModal() {
+        document.getElementById("settingsModal").style.display = "none";
+        document.getElementById("overlay").style.display = "none";
+    }
+
+    function saveSettings() {
+        playerNames = [
+            document.getElementById("playerName0").value || "玩家 1",
+            document.getElementById("playerName1").value || "玩家 2",
+            document.getElementById("playerName2").value || "玩家 3",
+            document.getElementById("playerName3").value || "玩家 4"
+        ];
+        multiplier = parseInt(document.getElementById("multiplier").value) || 1;
+        saveToLocalStorage();
+        closeSettingsModal();
+        updatePlayerNames();
+        updateTotalScores();
+        updateLatestScores();
+    }
+
+    function resetGame() {
+        scores = [0, 0, 0, 0];
+        winCounts = [0, 0, 0, 0];
+        roundNumber = 1;
+        history = [];
+        saveToLocalStorage();
+        updateTotalScores();
+        updateLatestScores();
+    }
+
+    // 分數輸入功能
+    function setWinner(winnerIndex) {
+        currentWinner = winnerIndex;
+        document.getElementById("mainContainer").style.display = "none";
+        document.getElementById("inputContainer").style.display = "block";
+
+        const inputFields = document.getElementById("inputFields");
+        inputFields.innerHTML = "";
+        playerNames.forEach((name, index) => {
+            const label = document.createElement("span");
+            label.className = `player-label player-${index + 1}`;
+            label.textContent = name;
+
+            const input = document.createElement("input");
+            input.type = index === winnerIndex ? "text" : "number";
+            input.id = `loss${index}`;
+            if (index === winnerIndex) {
+                input.value = "Win";
+                input.readOnly = true;
+            } else {
+                input.placeholder = "請輸入分數";
+            }
+
+            const fieldWrapper = document.createElement("div");
+            fieldWrapper.style.marginBottom = "10px";
+            fieldWrapper.appendChild(label);
+            fieldWrapper.appendChild(input);
+            inputFields.appendChild(fieldWrapper);
+        });
+    }
+
+    function submitScores() {
+        const roundScores = [0, 0, 0, 0];
+        let totalLoss = 0;
+
+        playerNames.forEach((_, index) => {
+            if (index !== currentWinner) {
+                const loss = parseInt(document.getElementById(`loss${index}`).value) || 0;
+                roundScores[index] = -loss * multiplier;
+                totalLoss += loss * multiplier;
+            }
         });
 
-        // 更新玩家名稱（同步所有部分）
-        function updatePlayerNames() {
-            playerNames.forEach((name, index) => {
-                // 更新主頁面按鈕名稱
-                const button = document.querySelector(`.player-${index + 1}`);
-                if (button) button.textContent = name;
+        roundScores[currentWinner] = totalLoss;
+        history.push(roundScores);
+        scores = scores.map((score, i) => score + roundScores[i]);
+        winCounts[currentWinner]++;
+        roundNumber++;
+        saveToLocalStorage();
+        updateTotalScores();
+        updateLatestScores();
+        resetRound();
+    }
 
-                // 更新最近兩場表格名稱
-                const latestHeader = document.getElementById(`playerNameHeader${index + 1}`);
-                if (latestHeader) latestHeader.textContent = name;
+    function resetRound() {
+        document.getElementById("mainContainer").style.display = "block";
+        document.getElementById("inputContainer").style.display = "none";
+    }
 
-                // 更新每場結果表格名稱
-                const resultsHeader = document.getElementById(`playerNameResults${index + 1}`);
-                if (resultsHeader) resultsHeader.textContent = name;
-            });
-        }
+    // 每場結果
+    function openResults() {
+        document.getElementById("mainContainer").style.display = "none";
+        document.getElementById("resultsContainer").style.display = "block";
+        updateHistory();
+    }
 
-        // 遊戲設定功能
-        function openSettingsModal() {
-            document.getElementById("settingsModal").style.display = "block";
-            document.getElementById("overlay").style.display = "block";
+    function closeResults() {
+        document.getElementById("mainContainer").style.display = "block";
+        document.getElementById("resultsContainer").style.display = "none";
+    }
 
-            document.getElementById("playerName0").value = playerNames[0];
-            document.getElementById("playerName1").value = playerNames[1];
-            document.getElementById("playerName2").value = playerNames[2];
-            document.getElementById("playerName3").value = playerNames[3];
-            document.getElementById("multiplier").value = multiplier;
-        }
+    function updateHistory() {
+        const allScoresTable = document.getElementById("allScores");
+        allScoresTable.innerHTML = "";
+        history.forEach((round, index) => {
+            const row = document.createElement("tr");
+            row.innerHTML = `<td>回合 ${index + 1}</td>` + round.map(score =>
+                `<td class="${score > 0 ? 'positive' : 'negative'}">${score}</td>`).join("");
+            allScoresTable.appendChild(row);
+        });
+    }
 
-        function closeSettingsModal() {
-            document.getElementById("settingsModal").style.display = "none";
-            document.getElementById("overlay").style.display = "none";
-        }
+    // 總分與最近兩場更新
+    function updateTotalScores() {
+        const totalScoresTable = document.getElementById("totalScores");
+        totalScoresTable.innerHTML = "";
+        scores.forEach((score, index) => {
+            const winRate = roundNumber > 1 ? `${((winCounts[index] / (roundNumber - 1)) * 100).toFixed(1)}%` : "0%";
+            const row = document.createElement("tr");
+            row.innerHTML = `
+                <td>${playerNames[index]}</td>
+                <td class="${score > 0 ? 'positive' : 'negative'}">${score}</td>
+                <td>${winRate}</td>
+            `;
+            totalScoresTable.appendChild(row);
+        });
+        saveToLocalStorage();
+    }
 
-        function saveSettings() {
-            playerNames = [
-                document.getElementById("playerName0").value || "玩家 1",
-                document.getElementById("playerName1").value || "玩家 2",
-                document.getElementById("playerName2").value || "玩家 3",
-                document.getElementById("playerName3").value || "玩家 4"
-            ];
-            multiplier = parseInt(document.getElementById("multiplier").value) || 1;
-            localStorage.setItem("playerNames", JSON.stringify(playerNames));
-            localStorage.setItem("multiplier", multiplier);
-            closeSettingsModal();
-            updatePlayerNames();
-            updateTotalScores();
-            updateLatestScores();
-        }
+    function updateLatestScores() {
+        const latestScoresTable = document.getElementById("latestScores");
+        latestScoresTable.innerHTML = "";
+        const latestRounds = history.slice(-2);
+        latestRounds.forEach((round, index) => {
+            const row = document.createElement("tr");
+            row.innerHTML = `<td>回合 ${history.length - latestRounds.length + index + 1}</td>` + round.map(score =>
+                `<td class="${score > 0 ? 'positive' : 'negative'}">${score}</td>`).join("");
+            latestScoresTable.appendChild(row);
+        });
+    }
+</script>
 
-        function resetGame() {
-            scores = [0, 0, 0, 0];
-            winCounts = [0, 0, 0, 0];
-            roundNumber = 1;
-            history = [];
-            localStorage.setItem("scores", JSON.stringify(scores));
-            localStorage.setItem("winCounts", JSON.stringify(winCounts));
-            localStorage.setItem("roundNumber", JSON.stringify(roundNumber));
-            localStorage.setItem("history", JSON.stringify(history));
-            updateTotalScores();
-            updateLatestScores();
-        }
-
-        // 分數輸入功能
-        function setWinner(winnerIndex) {
-            currentWinner = winnerIndex;
-            document.getElementById("mainContainer").style.display = "none";
-            document.getElementById("inputContainer").style.display = "block";
-
-            const inputFields = document.getElementById("inputFields");
-            inputFields.innerHTML = "";
-            playerNames.forEach((name, index) => {
-                const label = document.createElement("span");
-                label.className = `player-label player-${index + 1}`;
-                label.textContent = name;
-
-                const input = document.createElement("input");
-                input.type = index === winnerIndex ? "text" : "number";
-                input.id = `loss${index}`;
-                if (index === winnerIndex) {
-                    input.value = "Win";
-                    input.readOnly = true;
-                } else {
-                    input.placeholder = "請輸入分數";
-                }
-
-                const fieldWrapper = document.createElement("div");
-                fieldWrapper.style.marginBottom = "10px";
-                fieldWrapper.appendChild(label);
-                fieldWrapper.appendChild(input);
-                inputFields.appendChild(fieldWrapper);
-            });
-        }
-
-        function submitScores() {
-            const roundScores = [0, 0, 0, 0];
-            let totalLoss = 0;
-
-            playerNames.forEach((_, index) => {
-                if (index !== currentWinner) {
-                    const loss = parseInt(document.getElementById(`loss${index}`).value) || 0;
-                    roundScores[index] = -loss * multiplier;
-                    totalLoss += loss * multiplier;
-                }
-            });
-
-            roundScores[currentWinner] = totalLoss;
-            history.push(roundScores);
-            scores = scores.map((score, i) => score + roundScores[i]);
-            winCounts[currentWinner]++;
-            localStorage.setItem("history", JSON.stringify(history));
-            localStorage.setItem("scores", JSON.stringify(scores));
-            localStorage.setItem("winCounts", JSON.stringify(winCounts));
-            roundNumber++;
-            updateTotalScores();
-            updateLatestScores();
-            resetRound();
-        }
-
-        function resetRound() {
-            document.getElementById("mainContainer").style.display = "block";
-            document.getElementById("inputContainer").style.display = "none";
-        }
-
-        // 每場結果功能
-        function openResults() {
-            document.getElementById("mainContainer").style.display = "none";
-            document.getElementById("resultsContainer").style.display = "block";
-            updateHistory();
-        }
-
-        function closeResults() {
-            document.getElementById("mainContainer").style.display = "block";
-            document.getElementById("resultsContainer").style.display = "none";
-        }
-
-        function updateHistory() {
-            const allScoresTable = document.getElementById("allScores");
-            allScoresTable.innerHTML = "";
-            history.forEach((round, index) => {
-                const row = document.createElement("tr");
-                row.innerHTML = `<td>回合 ${index + 1}</td>` + round.map(score =>
-                    `<td class="${score > 0 ? 'positive' : 'negative'}">${score}</td>`).join("");
-                allScoresTable.appendChild(row);
-            });
-        }
-
-        // 總分與最近兩場更新
-        function updateTotalScores() {
-            const totalScoresTable = document.getElementById("totalScores");
-            totalScoresTable.innerHTML = "";
-            scores.forEach((score, index) => {
-                const winRate = roundNumber > 1 ? `${((winCounts[index] / (roundNumber - 1)) * 100).toFixed(1)}%` : "0%";
-                const row = document.createElement("tr");
-                row.innerHTML = `
-                    <td>${playerNames[index]}</td>
-                    <td class="${score > 0 ? 'positive' : 'negative'}">${score}</td>
-                    <td>${winRate}</td>
-                `;
-                totalScoresTable.appendChild(row);
-            });
-        }
-
-        function updateLatestScores() {
-            const latestScoresTable = document.getElementById("latestScores");
-            latestScoresTable.innerHTML = "";
-            const latestRounds = history.slice(-2);
-            latestRounds.forEach((round, index) => {
-                const row = document.createElement("tr");
-                row.innerHTML = `<td>回合 ${history.length - latestRounds.length + index + 1}</td>` + round.map(score =>
-                    `<td class="${score > 0 ? 'positive' : 'negative'}">${score}</td>`).join("");
-                latestScoresTable.appendChild(row);
-            });
-        }
-    </script>
+</body>
+</html>
