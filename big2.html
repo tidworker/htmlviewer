@@ -28,6 +28,12 @@
         .player-4 { background-color: #7A8FA1; }
         .settings-btn { background-color: #50597B; }
         .results-btn { background-color: #007BFF; }
+        .input-btn {
+            background-color: #004A99;
+            color: white;
+            font-size: 18px;
+            border-radius: 5px;
+        }
         .container {
             display: none;
             margin-top: 20px;
@@ -160,8 +166,9 @@
             <label for="multiplier">倍率</label>
             <input id="multiplier" type="number" min="1" value="1">
         </div>
-        <button onclick="saveSettings()">儲存設定</button>
-        <button onclick="closeSettingsModal()">取消</button>
+        <button class="input-btn" onclick="saveSettings()">儲存設定</button>
+        <button class="input-btn" onclick="resetGame()">重置</button>
+        <button class="input-btn" onclick="closeSettingsModal()">取消</button>
     </div>
 
     <script>
@@ -207,6 +214,20 @@
             localStorage.setItem("multiplier", multiplier);
             closeSettingsModal();
             updatePlayerNames();
+        }
+
+        function resetGame() {
+            scores = [0, 0, 0, 0];
+            winCounts = [0, 0, 0, 0];
+            roundNumber = 1;
+            history = [];
+            localStorage.setItem("scores", JSON.stringify(scores));
+            localStorage.setItem("winCounts", JSON.stringify(winCounts));
+            localStorage.setItem("roundNumber", JSON.stringify(roundNumber));
+            localStorage.setItem("history", JSON.stringify(history));
+            updateTotalScores();
+            updateLatestScores();
+            closeSettingsModal();
         }
 
         function updatePlayerNames() {
@@ -315,20 +336,6 @@
         function resetRound() {
             document.getElementById("mainContainer").style.display = "block";
             document.getElementById("inputContainer").style.display = "none";
-        }
-
-        function resetGame() {
-            scores = [0, 0, 0, 0];
-            winCounts = [0, 0, 0, 0];
-            roundNumber = 1;
-            history = [];
-            localStorage.setItem("scores", JSON.stringify(scores));
-            localStorage.setItem("winCounts", JSON.stringify(winCounts));
-            localStorage.setItem("roundNumber", JSON.stringify(roundNumber));
-            localStorage.setItem("history", JSON.stringify(history));
-            updateTotalScores();
-            updateLatestScores();
-            closeResults();
         }
     </script>
 </body>
