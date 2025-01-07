@@ -158,10 +158,10 @@
             <thead>
                 <tr>
                     <th>回合</th>
-                    <th>玩家 1</th>
-                    <th>玩家 2</th>
-                    <th>玩家 3</th>
-                    <th>玩家 4</th>
+                    <th id="playerNameResults1">玩家 1</th>
+                    <th id="playerNameResults2">玩家 2</th>
+                    <th id="playerNameResults3">玩家 3</th>
+                    <th id="playerNameResults4">玩家 4</th>
                 </tr>
             </thead>
             <tbody id="allScores"></tbody>
@@ -270,7 +270,8 @@
     function setWinner(winnerIndex) {
         currentWinner = winnerIndex;
         document.getElementById("mainContainer").style.display = "none";
-        document.getElementById("inputContainer").style.display = "block";
+
+document.getElementById("inputContainer").style.display = "block";
 
         const inputFields = document.getElementById("inputFields");
         inputFields.innerHTML = "";
@@ -317,6 +318,7 @@
         saveToLocalStorage();
         updateTotalScores();
         updateLatestScores();
+        updateHistory();
         resetRound();
     }
 
