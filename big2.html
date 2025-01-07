@@ -133,10 +133,10 @@
             <thead>
                 <tr>
                     <th>回合</th>
-                    <th>玩家 1</th>
-                    <th>玩家 2</th>
-                    <th>玩家 3</th>
-                    <th>玩家 4</th>
+                    <th id="playerNameHeader1">玩家 1</th>
+                    <th id="playerNameHeader2">玩家 2</th>
+                    <th id="playerNameHeader3">玩家 3</th>
+                    <th id="playerNameHeader4">玩家 4</th>
                 </tr>
             </thead>
             <tbody id="latestScores"></tbody>
@@ -158,10 +158,10 @@
             <thead>
                 <tr>
                     <th>回合</th>
-                    <th>玩家 1</th>
-                    <th>玩家 2</th>
-                    <th>玩家 3</th>
-                    <th>玩家 4</th>
+                    <th id="playerNameResults1">玩家 1</th>
+                    <th id="playerNameResults2">玩家 2</th>
+                    <th id="playerNameResults3">玩家 3</th>
+                    <th id="playerNameResults4">玩家 4</th>
                 </tr>
             </thead>
             <tbody id="allScores"></tbody>
@@ -180,6 +180,7 @@
             <input id="multiplier" type="number" min="1" value="1">
         </div>
         <button class="input-btn" onclick="saveSettings()">儲存設定</button>
+        <button class="input-btn" onclick="resetGame()">重置</button>
         <button class="input-btn" onclick="closeSettingsModal()">關閉</button>
     </div>
 
@@ -200,7 +201,24 @@
             updateLatestScores();
         });
 
-        // 遊戲設定
+        // 更新玩家名稱（同步所有部分）
+        function updatePlayerNames() {
+            playerNames.forEach((name, index) => {
+                // 更新主頁面按鈕名稱
+                const button = document.querySelector(`.player-${index + 1}`);
+                if (button) button.textContent = name;
+
+                // 更新最近兩場表格名稱
+                const latestHeader = document.getElementById(`playerNameHeader${index + 1}`);
+                if (latestHeader) latestHeader.textContent = name;
+
+                // 更新每場結果表格名稱
+                const resultsHeader = document.getElementById(`playerNameResults${index + 1}`);
+                if (resultsHeader) resultsHeader.textContent = name;
+            });
+        }
+
+        // 遊戲設定功能
         function openSettingsModal() {
             document.getElementById("settingsModal").style.display = "block";
             document.getElementById("overlay").style.display = "block";
@@ -229,6 +247,8 @@
             localStorage.setItem("multiplier", multiplier);
             closeSettingsModal();
             updatePlayerNames();
+            updateTotalScores();
+            updateLatestScores();
         }
 
         function resetGame() {
@@ -244,14 +264,7 @@
             updateLatestScores();
         }
 
-        function updatePlayerNames() {
-            playerNames.forEach((name, index) => {
-                const button = document.querySelector(`.player-${index + 1}`);
-                if (button) button.textContent = name;
-            });
-        }
-
-        // 分數輸入與計算
+        // 分數輸入功能
         function setWinner(winnerIndex) {
             currentWinner = winnerIndex;
             document.getElementById("mainContainer").style.display = "none";
@@ -312,7 +325,7 @@
             document.getElementById("inputContainer").style.display = "none";
         }
 
-        // 每場結果
+        // 每場結果功能
         function openResults() {
             document.getElementById("mainContainer").style.display = "none";
             document.getElementById("resultsContainer").style.display = "block";
@@ -363,5 +376,3 @@
             });
         }
     </script>
-</body>
-</html>
