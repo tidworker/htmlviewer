@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>修改Big2歷史記錄</title>
+    <title>修改大老二歷史記錄</title>
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -81,8 +81,9 @@
     <button class="btn" onclick="goBack()">返回計分系統</button>
 
     <script>
-        const history = JSON.parse(localStorage.getItem("history")) || [];
+        let history = JSON.parse(localStorage.getItem("history")) || [];
         const playerNames = JSON.parse(localStorage.getItem("playerNames")) || ["玩家 1", "玩家 2", "玩家 3", "玩家 4"];
+        let scores = JSON.parse(localStorage.getItem("scores")) || [0, 0, 0, 0];
 
         function loadHistoryData() {
             // 更新表格標題以顯示玩家名稱
@@ -112,16 +113,41 @@
                 const scoreInput = document.getElementById(`score${roundIndex}-${i}`);
                 updatedScores.push(parseInt(scoreInput.value) || 0);
             }
+
+            // 更新歷史記錄
             history[roundIndex] = updatedScores;
+
+            // 更新總分
+            updateTotalScores();
+
+            // 儲存至 localStorage
             localStorage.setItem("history", JSON.stringify(history));
-            alert(`回合 ${roundIndex + 1} 的分數已更新！`);
+            localStorage.setItem("scores", JSON.stringify(scores));
+
+            alert(`回合 ${roundIndex + 1} 的分數已更新，並同步更新總分！`);
             loadHistoryData();
+        }
+
+        function updateTotalScores() {
+            // 初始化總分為 0
+            scores = [0, 0, 0, 0];
+
+            // 累加歷史記錄中的每一回合分數
+            history.forEach(round => {
+                round.forEach((score, index) => {
+                    scores[index] += score;
+                });
+            });
+
+            // 儲存更新後的總分到 localStorage
+            localStorage.setItem("scores", JSON.stringify(scores));
         }
 
         function resetLocalStorage() {
             if (confirm("確定要清除所有歷史記錄？此操作無法復原！")) {
                 localStorage.removeItem("history");
-                alert("所有歷史記錄已清除！");
+                localStorage.removeItem("scores");
+                alert("所有歷史記錄與總分已清除！");
                 location.reload();
             }
         }
