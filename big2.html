@@ -214,6 +214,8 @@
             localStorage.setItem("multiplier", multiplier);
             closeSettingsModal();
             updatePlayerNames();
+            updateTotalScores();
+            updateLatestScores();
         }
 
         function resetGame() {
@@ -227,7 +229,6 @@
             localStorage.setItem("history", JSON.stringify(history));
             updateTotalScores();
             updateLatestScores();
-            closeSettingsModal();
         }
 
         function updatePlayerNames() {
@@ -248,11 +249,13 @@
                 const label = document.createElement("label");
                 label.textContent = name;
                 const input = document.createElement("input");
-                input.type = "number";
+                input.type = index === winnerIndex ? "text" : "number";
                 input.id = `loss${index}`;
                 if (index === winnerIndex) {
                     input.value = "Win";
                     input.readOnly = true;
+                } else {
+                    input.placeholder = "請輸入分數";
                 }
                 inputFields.appendChild(label);
                 inputFields.appendChild(input);
