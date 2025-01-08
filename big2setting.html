@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>大老二遊戲設定</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+            margin: 20px auto;
+            background-color: #F5F5F5;
+        }
+        .container {
+            margin: 20px auto;
+            width: 90%;
+            max-width: 500px;
+            background-color: #FFFFFF;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+        input[type="text"], input[type="number"] {
+            width: 90%;
+            height: 40px;
+            margin: 10px 0;
+            padding: 10px;
+            font-size: 16px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            box-sizing: border-box;
+        }
+        button {
+            width: 90%;
+            height: 40px;
+            margin: 10px 0;
+            background-color: #007BFF;
+            color: white;
+            font-size: 16px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        .checkbox-group {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            margin: 10px 0;
+        }
+        .checkbox-group label {
+            font-size: 16px;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+    </style>
+</head>
+<body>
+    <h1>遊戲設定</h1>
+    <div class="container">
+        <h3>玩家名稱設定</h3>
+        <input id="playerName0" type="text" placeholder="玩家 1 名稱">
+        <input id="playerName1" type="text" placeholder="玩家 2 名稱">
+        <input id="playerName2" type="text" placeholder="玩家 3 名稱">
+        <input id="playerName3" type="text" placeholder="玩家 4 名稱">
+
+        <h3>遊戲設定</h3>
+        <label for="multiplier">基礎倍率：</label>
+        <input id="multiplier" type="number" min="1" value="1">
+
+        <h3>Double 張數選擇</h3>
+        <div class="checkbox-group">
+            <label><input type="checkbox" id="double5"> 5 張</label>
+            <label><input type="checkbox" id="double7"> 7 張</label>
+            <label><input type="checkbox" id="double10"> 10 張</label>
+            <label><input type="checkbox" id="double13"> 13 張</label>
+        </div>
+
+        <button onclick="saveSettings()">儲存設定</button>
+    </div>
+
+    <script>
+        const settingsKey = "big2Settings";
+
+        function saveSettings() {
+            const doubleCards = [];
+            if (document.getElementById("double5").checked) doubleCards.push(5);
+            if (document.getElementById("double7").checked) doubleCards.push(7);
+            if (document.getElementById("double10").checked) doubleCards.push(10);
+            if (document.getElementById("double13").checked) doubleCards.push(13);
+
+            const settings = {
+                playerNames: [
+                    document.getElementById("playerName0").value || "玩家 1",
+                    document.getElementById("playerName1").value || "玩家 2",
+                    document.getElementById("playerName2").value || "玩家 3",
+                    document.getElementById("playerName3").value || "玩家 4"
+                ],
+                multiplier: parseInt(document.getElementById("multiplier").value) || 1,
+                doubleCards: doubleCards
+            };
+
+            localStorage.setItem(settingsKey, JSON.stringify(settings));
+            alert("設定已儲存！");
+        }
+
+        function loadSettings() {
+            const settings = JSON.parse(localStorage.getItem(settingsKey));
+            if (!settings) return;
+
+            document.getElementById("playerName0").value = settings.playerNames[0] || "玩家 1";
+            document.getElementById("playerName1").value = settings.playerNames[1] || "玩家 2";
+            document.getElementById("playerName2").value = settings.playerNames[2] || "玩家 3";
+            document.getElementById("playerName3").value = settings.playerNames[3] || "玩家 4";
+            document.getElementById("multiplier").value = settings.multiplier || 1;
+
+            const doubleCards = settings.doubleCards || [];
+            document.getElementById("double5").checked = doubleCards.includes(5);
+            document.getElementById("double7").checked = doubleCards.includes(7);
+            document.getElementById("double10").checked = doubleCards.includes(10);
+            document.getElementById("double13").checked = doubleCards.includes(13);
+        }
+
+        document.addEventListener("DOMContentLoaded", loadSettings);
+    </script>
+</body>
+</html>
