@@ -180,12 +180,11 @@
     </div>
 
     <script>
-        const settingsKey = "big2Settings";
+        const scoresKey = "big2count";
         let currentWinnerIndex = null;
         let currentLoserIndex = null;
         let remainingPlayers = [];
         let playerNames = ["玩家 1", "玩家 2", "玩家 3", "玩家 4"];
-        let scores = [0, 0, 0, 0];
         let roundScores = [0, 0, 0, 0];
         let totalLoss = 0;
 
@@ -257,9 +256,10 @@
 
         function finalizeScores() {
             roundScores[currentWinnerIndex] = totalLoss;
-            roundScores.forEach((score, index) => {
-                scores[index] += score;
-            });
+
+            const storedScores = JSON.parse(localStorage.getItem(scoresKey)) || [];
+            storedScores.push([...roundScores]);
+            localStorage.setItem(scoresKey, JSON.stringify(storedScores));
 
             const summaryText = roundScores
                 .map((score, index) => `${playerNames[index]}: ${score > 0 ? "+" : ""}${score} 分`)
@@ -279,14 +279,6 @@
 
             document.getElementById("summary").style.display = "none";
             document.getElementById("mainContainer").style.display = "block";
-        }
-
-        document.addEventListener("DOMContentLoaded", () => {
-            loadSettings();
-        });
-
-        function loadSettings() {
-            // 可根據需求擴展設定功能。
         }
     </script>
 </body>
