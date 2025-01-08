@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>大老二分數總覽</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+            margin: 20px;
+            background-color: #F5F5F5;
+        }
+        .container {
+            margin: 20px auto;
+            padding: 20px;
+            background-color: #FFFFFF;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            max-width: 90%;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+        }
+        th, td {
+            border: 1px solid #ccc;
+            padding: 10px;
+            text-align: center;
+        }
+        th {
+            background-color: #EFEFEF;
+        }
+        .summary {
+            font-size: 18px;
+            font-weight: bold;
+            margin-top: 20px;
+        }
+        button {
+            padding: 10px 20px;
+            background-color: #007BFF;
+            color: white;
+            font-size: 16px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+    </style>
+</head>
+<body>
+    <h1>大老二分數總覽</h1>
+    <div class="container">
+        <h2>總分與勝率</h2>
+        <table>
+            <thead>
+                <tr>
+                    <th>玩家</th>
+                    <th>總分</th>
+                    <th>勝場數</th>
+                    <th>勝率</th>
+                </tr>
+            </thead>
+            <tbody id="summaryTable"></tbody>
+        </table>
+        <h2>最新兩場成績</h2>
+        <table>
+            <thead>
+                <tr>
+                    <th>回合</th>
+                    <th>玩家 1</th>
+                    <th>玩家 2</th>
+                    <th>玩家 3</th>
+                    <th>玩家 4</th>
+                </tr>
+            </thead>
+            <tbody id="latestRounds"></tbody>
+        </table>
+        <button onclick="viewAllRounds()">查看所有場次</button>
+    </div>
+    <div class="container" id="allRoundsContainer" style="display:none;">
+        <h2>所有場次成績</h2>
+        <table>
+            <thead>
+                <tr>
+                    <th>回合</th>
+                    <th>玩家 1</th>
+                    <th>玩家 2</th>
+                    <th>玩家 3</th>
+                    <th>玩家 4</th>
+                </tr>
+            </thead>
+            <tbody id="allRounds"></tbody>
+        </table>
+        <button onclick="backToSummary()">返回總覽</button>
+    </div>
+
+    <script>
+        const scoresKey = "big2count";
+        const playerNames = ["玩家 1", "玩家 2", "玩家 3", "玩家 4"];
+
+        function loadScores() {
+            const allRounds = JSON.parse(localStorage.getItem(scoresKey)) || [];
+            calculateResults(allRounds);
+            displaySummary(allRounds);
+            displayLatestRounds(allRounds);
+            displayAllRounds(allRounds);
+        }
+
+        function calculateResults(allRounds) {
+            const totalScores = [0, 0, 0, 0];
+            const winCounts = [0, 0, 0, 0];
+            const totalRounds = allRounds.length;
+
+            allRounds.forEach(round => {
+                round.forEach((score, index) => {
+                    totalScores[index] += score;
+                });
+                const winnerIndex = round.findIndex(score => score > 0);
+                if (winnerIndex !== -1) {
+                    winCounts[winnerIndex]++;
+                }
+            });
+
+            const summaryTable = document.getElementById("summaryTable");
+            summaryTable.innerHTML = "";
+            totalScores.forEach((score, index) => {
+                const winRate = totalRounds > 0 ? `${((winCounts[index] / totalRounds) * 100).toFixed(1)}%` : "0%";
+                const row = `
+                    <tr>
+                        <td>${playerNames[index]}</td>
+                        <td>${score}</td>
+                        <td>${winCounts[index]}</td>
+                        <td>${winRate}</td>
+                    </tr>
+                `;
+                summaryTable.innerHTML += row;
+            });
+        }
+
+        function displayLatestRounds(allRounds) {
+            const latestRounds = allRounds.slice(-2);
+            const latestRoundsTable = document.getElementById("latestRounds");
+            latestRoundsTable.innerHTML = "";
+            latestRounds.forEach((round, index) => {
+                const row = `
+                    <tr>
+                        <td>回合 ${allRounds.length - latestRounds.length + index + 1}</td>
+                        ${round.map(score => `<td>${score}</td>`).join("")}
+                    </tr>
+                `;
+                latestRoundsTable.innerHTML += row;
+            });
+        }
+
+        function displayAllRounds(allRounds) {
+            const allRoundsTable = document.getElementById("allRounds");
+            allRoundsTable.innerHTML = "";
+            allRounds.forEach((round, index) => {
+                const row = `
+                    <tr>
+                        <td>回合 ${index + 1}</td>
+                        ${round.map(score => `<td>${score}</td>`).join("")}
+                    </tr>
+                `;
+                allRoundsTable.innerHTML += row;
+            });
+        }
+
+        function viewAllRounds() {
+            document.querySelector(".container").style.display = "none";
+            document.getElementById("allRoundsContainer").style.display = "block";
+        }
+
+        function backToSummary() {
+            document.getElementById("allRoundsContainer").style.display = "none";
+            document.querySelector(".container").style.display = "block";
+        }
+
+        document.addEventListener("DOMContentLoaded", loadScores);
+    </script>
+</body>
+</html>
