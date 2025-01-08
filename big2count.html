@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>大老二計分</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+            margin: 20px;
+            background-color: #F5F5F5;
+        }
+        .player-btn {
+            width: 90%;
+            max-width: 300px;
+            height: 60px;
+            margin: 10px auto;
+            padding: 10px;
+            color: white;
+            border: none;
+            cursor: pointer;
+            font-size: 20px;
+            border-radius: 8px;
+        }
+        .player-1 { background-color: #8C9A78; }
+        .player-2 { background-color: #B090A0; }
+        .player-3 { background-color: #D2B282; }
+        .player-4 { background-color: #7A8FA1; }
+        .container {
+            display: none;
+            margin-top: 20px;
+            padding: 20px;
+            border-radius: 5px;
+            background-color: #FFFFFF;
+        }
+        .adjust-container {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 15px;
+            margin: 20px 0;
+        }
+        button {
+            width: 50px;
+            height: 50px;
+            background-color: #007BFF;
+            color: white;
+            font-size: 24px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        input[type="number"] {
+            width: 80px;
+            height: 50px;
+            padding: 10px;
+            font-size: 18px;
+            text-align: center;
+            border-radius: 5px;
+            border: 1px solid #ccc;
+        }
+        .action-btn {
+            display: inline-block;
+            width: 90%;
+            max-width: 300px;
+            height: 60px;
+            margin: 20px auto;
+            font-size: 20px;
+            font-weight: bold;
+            background-color: #007BFF;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+        }
+        .action-btn:hover {
+            background-color: #0056b3;
+        }
+        #currentScore {
+            margin: 20px auto;
+            font-size: 18px;
+            font-weight: bold;
+            color: #333;
+        }
+        #summary {
+            display: none;
+            margin-top: 20px;
+            font-size: 18px;
+            font-weight: bold;
+            color: #333;
+        }
+    </style>
+</head>
+<body>
+    <h1>大老二計分系統</h1>
+    <div id="mainContainer">
+        <button class="player-btn player-1" onclick="startScoring(0)">玩家 1</button>
+        <button class="player-btn player-2" onclick="startScoring(1)">玩家 2</button>
+        <button class="player-btn player-3" onclick="startScoring(2)">玩家 3</button>
+        <button class="player-btn player-4" onclick="startScoring(3)">玩家 4</button>
+    </div>
+
+    <div id="winnerContainer" class="container">
+        <h3 id="winnerAnnouncement"></h3>
+        <button class="action-btn" onclick="nextPlayer()">開始計分</button>
+    </div>
+
+    <div id="scoringContainer" class="container">
+        <h3 id="scoringAnnouncement"></h3>
+        <div class="adjust-container">
+            <button onclick="adjustCount('cardCount', -1)">-</button>
+            <input type="number" id="cardCount" placeholder="張數" min="0" max="13">
+            <button onclick="adjustCount('cardCount', 1)">+</button>
+        </div>
+        <div class="adjust-container">
+            <button onclick="adjustCount('lao2Count', -1)">-</button>
+            <input type="number" id="lao2Count" placeholder="老2張數" min="0" max="4">
+            <button onclick="adjustCount('lao2Count', 1)">+</button>
+        </div>
+        <p id="currentScore">計算結果：尚未計算</p>
+        <button class="action-btn" onclick="confirmPlayerScore()">確定</button>
+    </div>
+
+    <div id="summary" class="container">
+        <h3>當回合分數總結</h3>
+        <p id="summaryScores"></p>
+        <button class="action-btn" onclick="restartGame()">返回主畫面</button>
+    </div>
+
+    <script>
+        const settingsKey = "big2Settings";
+        let currentWinnerIndex = null;
+        let currentLoserIndex = null;
+        let remainingPlayers = [];
+        let playerNames = ["玩家 1", "玩家 2", "玩家 3", "玩家 4"];
+        let scores = [0, 0, 0, 0];
+        let roundScores = [0, 0, 0, 0];
+        let totalLoss = 0;
+
+        function loadSettings() {
+            const settings = JSON.parse(localStorage.getItem(settingsKey));
+            if (settings) playerNames = settings.playerNames || playerNames;
+        }
+
+        function startScoring(winnerIndex) {
+            currentWinnerIndex = winnerIndex;
+            remainingPlayers = playerNames
+                .map((_, index) => index)
+                .filter(index => index !== winnerIndex);
+
+            document.getElementById("mainContainer").style.display = "none";
+            document.getElementById("winnerContainer").style.display = "block";
+            document.getElementById("winnerAnnouncement").textContent = `${playerNames[winnerIndex]} 贏得牌局！`;
+        }
+
+        function nextPlayer() {
+            if (remainingPlayers.length === 0) {
+                finalizeScores();
+                return;
+            }
+
+            currentLoserIndex = remainingPlayers.shift();
+            document.getElementById("winnerContainer").style.display = "none";
+            document.getElementById("scoringContainer").style.display = "block";
+            document.getElementById("scoringAnnouncement").textContent = `請為 ${playerNames[currentLoserIndex]} 計分`;
+
+            // 清空輸入欄
+            document.getElementById("cardCount").value = "";
+            document.getElementById("lao2Count").value = "";
+            document.getElementById("currentScore").textContent = "計算結果：尚未計算";
+        }
+
+        function adjustCount(fieldId, delta) {
+            const field = document.getElementById(fieldId);
+            let value = parseInt(field.value) || 0;
+            value = Math.max(0, Math.min(fieldId === "cardCount" ? 13 : 4, value + delta));
+            field.value = value;
+            updateCurrentScore();
+        }
+
+        function updateCurrentScore() {
+            const cardCount = parseInt(document.getElementById("cardCount").value) || 0;
+            const lao2Count = parseInt(document.getElementById("lao2Count").value) || 0;
+
+            const scoreLoss = cardCount * Math.pow(2, lao2Count);
+            document.getElementById("currentScore").textContent = `計算結果：-${scoreLoss} 分`;
+        }
+
+        function confirmPlayerScore() {
+            const cardCount = parseInt(document.getElementById("cardCount").value) || 0;
+            const lao2Count = parseInt(document.getElementById("lao2Count").value) || 0;
+
+            const scoreLoss = cardCount * Math.pow(2, lao2Count);
+            roundScores[currentLoserIndex] = -scoreLoss;
+            totalLoss += scoreLoss;
+
+            document.getElementById("scoringContainer").style.display = "none";
+            nextPlayer();
+        }
+
+        function finalizeScores() {
+            roundScores[currentWinnerIndex] = totalLoss;
+            roundScores.forEach((score, index) => {
+                scores[index] += score;
+            });
+
+            const summaryText = roundScores
+                .map((score, index) => `${playerNames[index]}: ${score > 0 ? "+" : ""}${score} 分`)
+                .join("<br>");
+            document.getElementById("summaryScores").innerHTML = summaryText;
+
+            document.getElementById("scoringContainer").style.display = "none";
+            document.getElementById("summary").style.display = "block";
+        }
+
+        function restartGame() {
+            currentWinnerIndex = null;
+            currentLoserIndex = null;
+            remainingPlayers = [];
+            totalLoss = 0;
+            roundScores = [0, 0, 0, 0];
+
+                 document.getElementById("summary").style.display = "none";
+        document.getElementById("mainContainer").style.display = "block";
+    }
+
+    document.addEventListener("DOMContentLoaded", () => {
+        loadSettings();
+    });
+    </script>
+</body>
+</html>
+        
