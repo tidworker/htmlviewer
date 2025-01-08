@@ -80,6 +80,45 @@
         .action-btn:hover {
             background-color: #0056b3;
         }
+        .switch {
+            position: relative;
+            display: inline-block;
+            width: 60px;
+            height: 34px;
+        }
+        .switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+        .slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: #ccc;
+            transition: 0.4s;
+            border-radius: 34px;
+        }
+        .slider:before {
+            position: absolute;
+            content: "";
+            height: 26px;
+            width: 26px;
+            left: 4px;
+            bottom: 4px;
+            background-color: white;
+            transition: 0.4s;
+            border-radius: 50%;
+        }
+        input:checked + .slider {
+            background-color: #007BFF;
+        }
+        input:checked + .slider:before {
+            transform: translateX(26px);
+        }
         #currentScore {
             margin: 20px auto;
             font-size: 18px;
@@ -121,6 +160,15 @@
             <input type="number" id="lao2Count" placeholder="老2張數" min="0" max="4">
             <button onclick="adjustCount('lao2Count', 1)">+</button>
         </div>
+        <div>
+            <label>
+                怪物加成：
+                <label class="switch">
+                    <input type="checkbox" id="monsterOption" onchange="updateCurrentScore()">
+                    <span class="slider"></span>
+                </label>
+            </label>
+        </div>
         <p id="currentScore">計算結果：尚未計算</p>
         <button class="action-btn" onclick="confirmPlayerScore()">確定</button>
     </div>
@@ -140,11 +188,6 @@
         let scores = [0, 0, 0, 0];
         let roundScores = [0, 0, 0, 0];
         let totalLoss = 0;
-
-        function loadSettings() {
-            const settings = JSON.parse(localStorage.getItem(settingsKey));
-            if (settings) playerNames = settings.playerNames || playerNames;
-        }
 
         function startScoring(winnerIndex) {
             currentWinnerIndex = winnerIndex;
@@ -168,9 +211,9 @@
             document.getElementById("scoringContainer").style.display = "block";
             document.getElementById("scoringAnnouncement").textContent = `請為 ${playerNames[currentLoserIndex]} 計分`;
 
-            // 清空輸入欄
             document.getElementById("cardCount").value = "";
             document.getElementById("lao2Count").value = "";
+            document.getElementById("monsterOption").checked = false;
             document.getElementById("currentScore").textContent = "計算結果：尚未計算";
         }
 
@@ -185,16 +228,26 @@
         function updateCurrentScore() {
             const cardCount = parseInt(document.getElementById("cardCount").value) || 0;
             const lao2Count = parseInt(document.getElementById("lao2Count").value) || 0;
+            const isMonster = document.getElementById("monsterOption").checked;
 
-            const scoreLoss = cardCount * Math.pow(2, lao2Count);
+            let scoreLoss = cardCount * Math.pow(2, lao2Count);
+            if (isMonster) {
+                scoreLoss *= 2;
+            }
+
             document.getElementById("currentScore").textContent = `計算結果：-${scoreLoss} 分`;
         }
 
         function confirmPlayerScore() {
             const cardCount = parseInt(document.getElementById("cardCount").value) || 0;
             const lao2Count = parseInt(document.getElementById("lao2Count").value) || 0;
+            const isMonster = document.getElementById("monsterOption").checked;
 
-            const scoreLoss = cardCount * Math.pow(2, lao2Count);
+            let scoreLoss = cardCount * Math.pow(2, lao2Count);
+            if (isMonster) {
+                scoreLoss *= 2;
+            }
+
             roundScores[currentLoserIndex] = -scoreLoss;
             totalLoss += scoreLoss;
 
@@ -224,14 +277,17 @@
             totalLoss = 0;
             roundScores = [0, 0, 0, 0];
 
-                 document.getElementById("summary").style.display = "none";
-        document.getElementById("mainContainer").style.display = "block";
-    }
+            document.getElementById("summary").style.display = "none";
+            document.getElementById("mainContainer").style.display = "block";
+        }
 
-    document.addEventListener("DOMContentLoaded", () => {
-        loadSettings();
-    });
+        document.addEventListener("DOMContentLoaded", () => {
+            loadSettings();
+        });
+
+        function loadSettings() {
+            // 可根據需求擴展設定功能。
+        }
     </script>
 </body>
 </html>
-        
