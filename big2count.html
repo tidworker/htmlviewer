@@ -80,45 +80,6 @@
         .action-btn:hover {
             background-color: #0056b3;
         }
-        .switch {
-            position: relative;
-            display: inline-block;
-            width: 60px;
-            height: 34px;
-        }
-        .switch input {
-            opacity: 0;
-            width: 0;
-            height: 0;
-        }
-        .slider {
-            position: absolute;
-            cursor: pointer;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background-color: #ccc;
-            transition: 0.4s;
-            border-radius: 34px;
-        }
-        .slider:before {
-            position: absolute;
-            content: "";
-            height: 26px;
-            width: 26px;
-            left: 4px;
-            bottom: 4px;
-            background-color: white;
-            transition: 0.4s;
-            border-radius: 50%;
-        }
-        input:checked + .slider {
-            background-color: #007BFF;
-        }
-        input:checked + .slider:before {
-            transform: translateX(26px);
-        }
         #currentScore {
             margin: 20px auto;
             font-size: 18px;
@@ -160,39 +121,29 @@
             <input type="number" id="lao2Count" placeholder="老2張數" min="0" max="4">
             <button onclick="adjustCount('lao2Count', 1)">+</button>
         </div>
-        <div>
-            <label>
-                怪物加成：
-                <label class="switch">
-                    <input type="checkbox" id="monsterOption" onchange="updateCurrentScore()">
-                    <span class="slider"></span>
-                </label>
-            </label>
-        </div>
         <p id="currentScore">計算結果：尚未計算</p>
         <button class="action-btn" onclick="confirmPlayerScore()">確定</button>
     </div>
 
     <div id="summary" class="container">
         <h3>當回合分數總結</h3>
-        <p id="summaryScores"></p>
-        <button class="action-btn" onclick="restartGame()">返回主畫面</button>
+        <div id="summaryScores"></div>
+        <button class="action-btn" onclick="saveAndReturn()">儲存並返回</button>
     </div>
 
     <script>
-        const scoresKey = "big2count";
+        const scoresKey = "big2Scores";
         let currentWinnerIndex = null;
         let currentLoserIndex = null;
         let remainingPlayers = [];
         let playerNames = ["玩家 1", "玩家 2", "玩家 3", "玩家 4"];
-        let roundScores = [0, 0, 0, 0];
+        let scores = [0, 0, 0, 0];
+        const roundScores = [0, 0, 0, 0];
         let totalLoss = 0;
 
         function startScoring(winnerIndex) {
             currentWinnerIndex = winnerIndex;
-            remainingPlayers = playerNames
-                .map((_, index) => index)
-                .filter(index => index !== winnerIndex);
+            remainingPlayers = playerNames.map((_, index) => index).filter(index => index !== winnerIndex);
 
             document.getElementById("mainContainer").style.display = "none";
             document.getElementById("winnerContainer").style.display = "block";
@@ -212,7 +163,6 @@
 
             document.getElementById("cardCount").value = "";
             document.getElementById("lao2Count").value = "";
-            document.getElementById("monsterOption").checked = false;
             document.getElementById("currentScore").textContent = "計算結果：尚未計算";
         }
 
@@ -227,26 +177,16 @@
         function updateCurrentScore() {
             const cardCount = parseInt(document.getElementById("cardCount").value) || 0;
             const lao2Count = parseInt(document.getElementById("lao2Count").value) || 0;
-            const isMonster = document.getElementById("monsterOption").checked;
 
-            let scoreLoss = cardCount * Math.pow(2, lao2Count);
-            if (isMonster) {
-                scoreLoss *= 2;
-            }
-
+            const scoreLoss = cardCount * Math.pow(2, lao2Count);
             document.getElementById("currentScore").textContent = `計算結果：-${scoreLoss} 分`;
         }
 
         function confirmPlayerScore() {
             const cardCount = parseInt(document.getElementById("cardCount").value) || 0;
             const lao2Count = parseInt(document.getElementById("lao2Count").value) || 0;
-            const isMonster = document.getElementById("monsterOption").checked;
 
-            let scoreLoss = cardCount * Math.pow(2, lao2Count);
-            if (isMonster) {
-                scoreLoss *= 2;
-            }
-
+            const scoreLoss = cardCount * Math.pow(2, lao2Count);
             roundScores[currentLoserIndex] = -scoreLoss;
             totalLoss += scoreLoss;
 
@@ -261,24 +201,18 @@
             storedScores.push([...roundScores]);
             localStorage.setItem(scoresKey, JSON.stringify(storedScores));
 
-            const summaryText = roundScores
-                .map((score, index) => `${playerNames[index]}: ${score > 0 ? "+" : ""}${score} 分`)
-                .join("<br>");
-            document.getElementById("summaryScores").innerHTML = summaryText;
+            const summaryScores = document.getElementById("summaryScores");
+            summaryScores.innerHTML = roundScores
+                .map((score, index) => `<p>${playerNames[index]}: ${score > 0 ? "+" : ""}${score} 分</p>`)
+                .join("");
 
             document.getElementById("scoringContainer").style.display = "none";
             document.getElementById("summary").style.display = "block";
         }
 
-        function restartGame() {
-            currentWinnerIndex = null;
-            currentLoserIndex = null;
-            remainingPlayers = [];
-            totalLoss = 0;
-            roundScores = [0, 0, 0, 0];
-
-            document.getElementById("summary").style.display = "none";
-            document.getElementById("mainContainer").style.display = "block";
+        function saveAndReturn() {
+            alert("分數已儲存！");
+            location.reload();
         }
     </script>
 </body>
