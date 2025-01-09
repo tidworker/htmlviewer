@@ -204,6 +204,7 @@
     <script>
         const players = JSON.parse(localStorage.getItem('players'));
         const settings = JSON.parse(localStorage.getItem('settings'));
+        const scoresHistory = JSON.parse(localStorage.getItem('scoresHistory')) || [];
 
         if (!players || !settings) {
             alert('無法讀取設定資料，請先至設定頁面設置遊戲規則！');
@@ -242,16 +243,18 @@
         });
 
         document.getElementById('confirmWinnerBtn').addEventListener('click', () => {
-            losers.length = 0;
-            for (let i = 1; i <= 4; i++) {
-                if (i !== winner) losers.push(i);
-            }
-            currentLoserIndex = 0;
-            document.getElementById('confirmWinnerModal').style.display = 'none';
-            document.getElementById('overlay').style.display = 'none';
-            showModal(losers[currentLoserIndex]);
-        });
+    losers.length = 0;
+    for (let i = 1; i <= 4; i++) {
+        if (i !== winner) losers.push(i);
+    }
+    currentLoserIndex = 0;
 
+    // 關閉確認視窗
+    document.getElementById('confirmWinnerModal').style.display = 'none';
+    document.getElementById('overlay').style.display = 'none';
+
+    showModal(losers[currentLoserIndex]);
+});
         document.getElementById('cancelWinnerBtn').addEventListener('click', () => {
             document.getElementById('confirmWinnerModal').style.display = 'none';
             document.getElementById('overlay').style.display = 'none';
@@ -338,7 +341,20 @@
             for (let i = 1; i <= 4; i++) {
                 resultText += `${players[`player${i}`]}：${scores[`player${i}`]} 分\n`;
             }
+
             alert(resultText);
+
+            // 保存成績到 localStorage
+            const roundResult = {
+                round: scoresHistory.length + 1,
+                scores: { ...scores },
+                winner: players[`player${winner}`]
+            };
+
+            scoresHistory.push(roundResult);
+            localStorage.setItem('scoresHistory', JSON.stringify(scoresHistory));
+
+            console.log('分數記錄已更新:', scoresHistory);
         }
     </script>
 </body>
