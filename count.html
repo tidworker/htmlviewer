@@ -16,6 +16,11 @@
             text-align: center;
             font-size: 1.8em;
         }
+        .rules {
+            margin: 20px 0;
+            font-size: 1.2em;
+            text-align: center;
+        }
         .player-buttons {
             display: flex;
             justify-content: space-between;
@@ -34,11 +39,6 @@
         }
         button:hover {
             opacity: 0.8;
-        }
-        .rules {
-            margin: 20px 0;
-            font-size: 1.2em;
-            text-align: center;
         }
         .modal {
             position: fixed;
@@ -202,22 +202,26 @@
     </div>
 
     <script>
-        const defaultRules = {
-            multiplier: 2,
-            double7: true,
-            double10: true,
-            double13: false,
-        };
+        const players = JSON.parse(localStorage.getItem('players'));
+        const settings = JSON.parse(localStorage.getItem('settings'));
 
-        // 從 localStorage 獲取規則
-        const rules = JSON.parse(localStorage.getItem('gameRules')) || defaultRules;
+        if (!players || !settings) {
+            alert('無法讀取設定資料，請先至設定頁面設置遊戲規則！');
+            throw new Error('無法讀取設定資料');
+        }
 
-        // 更新主頁面規則顯示
         function updateRulesDisplay() {
-            const rulesText = `規則：倍率 ${rules.multiplier} | Double ${rules.double7 ? "7張, " : ""}${rules.double10 ? "10張, " : ""}${rules.double13 ? "13張" : ""}`.replace(/,\s*$/, '');
+            const rules = settings.rules;
+            const rulesText = `規則：倍率 ${settings.multiplier} | Double ${rules.rule7 ? '7張, ' : ''}${rules.rule10 ? '10張, ' : ''}${rules.rule13 ? '13張' : ''}`.replace(/,\s*$/, '');
             document.getElementById('rulesDisplay').innerText = rulesText;
         }
+
         updateRulesDisplay();
+
+        document.getElementById('player1Btn').innerText = players.player1 || '玩家 1';
+        document.getElementById('player2Btn').innerText = players.player2 || '玩家 2';
+        document.getElementById('player3Btn').innerText = players.player3 || '玩家 3';
+        document.getElementById('player4Btn').innerText = players.player4 || '玩家 4';
 
         let winner = '';
         let currentLoserIndex = 0;
@@ -231,7 +235,7 @@
         document.querySelectorAll('.player-buttons button').forEach((button, index) => {
             button.addEventListener('click', () => {
                 winner = index + 1;
-                document.getElementById('confirmWinnerText').innerText = `確認勝方為：玩家 ${winner} 嗎？`;
+                document.getElementById('confirmWinnerText').innerText = `確認勝方為：${players[`player${winner}`]} 嗎？`;
                 document.getElementById('confirmWinnerModal').style.display = 'block';
                 document.getElementById('overlay').style.display = 'block';
             });
@@ -256,7 +260,7 @@
 
         function showModal(playerIndex) {
             const modal = document.getElementById('scoreModal');
-            document.getElementById('playerTitle').innerText = `玩家 ${playerIndex}`;
+            document.getElementById('playerTitle').innerText = `玩家 ${players[`player${playerIndex}`]}`;
             document.getElementById('cardCount').value = 1;
             document.getElementById('twoCount').value = 0;
             updateScore();
@@ -287,13 +291,13 @@
             const twoCount = parseInt(document.getElementById('twoCount').value);
             const monsterBonus = document.getElementById('monsterBonusSwitch').checked ? 2 : 1;
 
-            let score = cardCount * Math.pow(2, twoCount) * rules.multiplier;
+            let score = cardCount * Math.pow(2, twoCount) * settings.multiplier;
 
-            if (rules.double7 && cardCount >= 7) score *= 2;
-            if (rules.double10 && cardCount >= 10) score *= 2;
-            if (rules.double13 && cardCount >= 13) score *= 2;
+            if (settings.rules.rule7 && cardCount >= 7) score *= 2;
+            if (settings.rules.rule10 && cardCount >= 10) score *= 2;
+            if (settings.rules.rule13 && cardCount >= 13) score *= 2;
 
-            score *= monsterBonus; // 怪物加成即時運算
+            score *= monsterBonus;
 
             document.getElementById('scoreResult').innerText = `分數為：${-Math.abs(score)} 分`;
         }
@@ -304,11 +308,11 @@
             const twoCount = parseInt(document.getElementById('twoCount').value);
             const monsterBonus = document.getElementById('monsterBonusSwitch').checked ? 2 : 1;
 
-            let score = cardCount * Math.pow(2, twoCount) * rules.multiplier;
+            let score = cardCount * Math.pow(2, twoCount) * settings.multiplier;
 
-            if (rules.double7 && cardCount >= 7) score *= 2;
-            if (rules.double10 && cardCount >= 10) score *= 2;
-            if (rules.double13 && cardCount >= 13) score *= 2;
+            if (settings.rules.rule7 && cardCount >= 7) score *= 2;
+            if (settings.rules.rule10 && cardCount >= 10) score *= 2;
+            if (settings.rules.rule13 && cardCount >= 13) score *= 2;
 
             score *= monsterBonus;
 
@@ -330,10 +334,9 @@
             }
             scores[`player${winner}`] = Math.abs(totalNegative);
 
-            // 顯示最終分數
             let resultText = '最終分數：\n';
             for (let i = 1; i <= 4; i++) {
-                resultText += `玩家 ${i}：${scores[`player${i}`]} 分\n`;
+                resultText += `${players[`player${i}`]}：${scores[`player${i}`]} 分\n`;
             }
             alert(resultText);
         }
