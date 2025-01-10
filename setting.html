@@ -71,7 +71,7 @@
     </style>
 </head>
 <body>
-    <br>
+    <h1>設定遊戲規則</h1>
     <form id="settingsForm">
         <!-- 玩家名稱 -->
         <div class="form-group">
@@ -99,7 +99,7 @@
 
         <!-- 規則：勾選 -->
         <div class="form-group">
-            <label>Double規則</label>
+            <label>勾選規則</label>
             <div class="checkbox-group">
                 <label><input type="checkbox" id="rule7"> 7 張</label>
                 <label><input type="checkbox" id="rule10"> 10 張</label>
@@ -112,13 +112,12 @@
     </form>
 
     <script>
-        // 1) 初始化預設資料 (可選)
         function initializeSettings() {
             const existingPlayers = JSON.parse(localStorage.getItem('players')) || {
-                player1: "玩家 1",
-                player2: "玩家 2",
-                player3: "玩家 3",
-                player4: "玩家 4"
+                player1: "玩家1",
+                player2: "玩家2",
+                player3: "玩家3",
+                player4: "玩家4"
             };
             const existingSettings = JSON.parse(localStorage.getItem('settings')) || {
                 multiplier: 1,
@@ -129,32 +128,23 @@
                 }
             };
 
-            // 預先填好輸入框
+            // 填入玩家名稱
             document.getElementById('player1').value = existingPlayers.player1;
             document.getElementById('player2').value = existingPlayers.player2;
             document.getElementById('player3').value = existingPlayers.player3;
             document.getElementById('player4').value = existingPlayers.player4;
 
+            // 填入倍率
             document.getElementById('multiplier').value = existingSettings.multiplier;
 
+            // 勾選
             document.getElementById('rule7').checked  = existingSettings.rules.rule7;
             document.getElementById('rule10').checked = existingSettings.rules.rule10;
             document.getElementById('rule13').checked = existingSettings.rules.rule13;
         }
 
-        // 2) focus 時自動清空欄位
-        function enableAutoClearOnFocus() {
-            // 取得所有文字與數字輸入欄位
-            const inputs = document.querySelectorAll('input[type="text"], input[type="number"]');
-            inputs.forEach((input) => {
-                input.addEventListener('focus', () => {
-                    input.value = "";
-                });
-            });
-        }
-
-        // 3) 儲存按鈕邏輯
         document.getElementById('saveButton').addEventListener('click', function() {
+            // 收集玩家名稱
             const players = {
                 player1: document.getElementById('player1').value.trim(),
                 player2: document.getElementById('player2').value.trim(),
@@ -162,24 +152,24 @@
                 player4: document.getElementById('player4').value.trim()
             };
 
+            // 收集規則
             const settings = {
                 multiplier: parseFloat(document.getElementById('multiplier').value),
                 rules: {
-                    rule7: document.getElementById('rule7').checked,
+                    rule7:  document.getElementById('rule7').checked,
                     rule10: document.getElementById('rule10').checked,
                     rule13: document.getElementById('rule13').checked
                 }
             };
 
-            // 儲存
             localStorage.setItem('players', JSON.stringify(players));
             localStorage.setItem('settings', JSON.stringify(settings));
+
             alert('設定已儲存！');
         });
 
         // 初始化
         initializeSettings();
-        enableAutoClearOnFocus();
     </script>
 </body>
 </html>
