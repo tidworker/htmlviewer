@@ -16,16 +16,18 @@
             text-align: center;
             font-size: 1.8em;
         }
-        table {
+        .summary-table, .history-table {
             width: 100%;
             border-collapse: collapse;
             margin-top: 20px;
         }
-        thead th {
+        .summary-table thead th,
+        .history-table thead th {
             background-color: #f4f4f4;
             font-weight: bold;
         }
-        th, td {
+        .summary-table th, .summary-table td,
+        .history-table th, .history-table td {
             border: 1px solid #ccc;
             padding: 10px;
             text-align: center;
@@ -57,63 +59,76 @@
         .delete-btn:hover {
             background-color: #c9302c;
         }
-        /* 顯示正整數為紅色 */
-        .positive {
+        /* 若要強調分數為正數可用這樣的高亮 */
+        .highlight {
             color: red;
+            font-weight: bold;
+        }
+        .title {
+            margin-top: 30px;
+            text-align: center;
+            font-size: 1.4em;
         }
     </style>
 </head>
 <body>
     <h1>比賽結果一覽</h1>
 
-    <!-- 賽局結果的表格 -->
-    <table id="scoresTable">
+    <!-- 上方「成績表」區域 -->
+    <div class="title">成績表</div>
+    <table class="summary-table" id="summaryTable">
         <thead>
             <tr>
-                <th>回合</th>
-                <!-- 以下標題改用玩家自訂名稱 -->
-                <th id="player1Header"></th>
-                <th id="player2Header"></th>
-                <th id="player3Header"></th>
-                <th id="player4Header"></th>
-                <!-- 移除「勝方」欄位 -->
+                <th>玩家</th>
+                <th>總分</th>
+                <th>勝場數</th>
+                <th>勝率</th>
             </tr>
         </thead>
         <tbody>
-            <!-- 由 JavaScript 動態插入 -->
+            <!-- 由 calcSummary() 動態插入 -->
+        </tbody>
+    </table>
+
+    <!-- 下方「逐場成績」區域 -->
+    <div class="title">逐場成績</div>
+    <table class="history-table" id="scoresTable">
+        <thead>
+            <tr>
+                <th>回合</th>
+                <th>玩家 1 分數</th>
+                <th>玩家 2 分數</th>
+                <th>玩家 3 分數</th>
+                <th>玩家 4 分數</th>
+            </tr>
+        </thead>
+        <tbody>
+            <!-- 由 renderScores() 動態插入 -->
         </tbody>
     </table>
 
     <div class="buttons">
-        <!-- 按下後只清除 scoresHistory，保留玩家名稱與設定 -->
         <button id="clearScoresBtn" class="delete-btn">清除所有分數</button>
     </div>
 
     <script>
-        // 讀取本地資料
-        const players = JSON.parse(localStorage.getItem('players')) || {
+        // 讀取 scoresHistory
+        let scoresHistory = JSON.parse(localStorage.getItem('scoresHistory')) || [];
+
+        // 同時讀取 players 用於成績表顯示名稱
+        let players = JSON.parse(localStorage.getItem('players')) || {
             player1: "玩家 1",
             player2: "玩家 2",
             player3: "玩家 3",
             player4: "玩家 4"
         };
-        const scoresHistory = JSON.parse(localStorage.getItem('scoresHistory')) || [];
 
-        // 取得表格
-        const scoresTable = document.getElementById('scoresTable');
-        const tableBody = scoresTable.querySelector('tbody');
-
-        // 將標題欄改為自訂玩家名稱
-        document.getElementById('player1Header').textContent = players.player1;
-        document.getElementById('player2Header').textContent = players.player2;
-        document.getElementById('player3Header').textContent = players.player3;
-        document.getElementById('player4Header').textContent = players.player4;
-
-        // 建立表格內容
+        // 「逐場成績」的表格初始化
         function renderScores() {
-            // 若無資料，顯示提示訊息
+            const scoresTableBody = document.getElementById('scoresTable').querySelector('tbody');
+
             if (scoresHistory.length === 0) {
-                tableBody.innerHTML = `
+                scoresTableBody.innerHTML = `
                     <tr>
                         <td colspan="5" class="no-data">目前沒有任何分數紀錄</td>
                     </tr>
@@ -121,35 +136,95 @@
                 return;
             }
 
-            // 若有資料，逐筆產生表格列
-            tableBody.innerHTML = ''; // 清空
+            scoresTableBody.innerHTML = '';
             scoresHistory.forEach((roundData, index) => {
                 const row = document.createElement('tr');
-
-                // 取得玩家分數
-                const p1Score = parseInt(roundData.scores.player1, 10) || 0;
-                const p2Score = parseInt(roundData.scores.player2, 10) || 0;
-                const p3Score = parseInt(roundData.scores.player3, 10) || 0;
-                const p4Score = parseInt(roundData.scores.player4, 10) || 0;
-
-                // 為正整數的分數添加紅色樣式
-                const p1Class = (p1Score > 0) ? 'positive' : '';
-                const p2Class = (p2Score > 0) ? 'positive' : '';
-                const p3Class = (p3Score > 0) ? 'positive' : '';
-                const p4Class = (p4Score > 0) ? 'positive' : '';
+                const p1Score = roundData.scores.player1 || 0;
+                const p2Score = roundData.scores.player2 || 0;
+                const p3Score = roundData.scores.player3 || 0;
+                const p4Score = roundData.scores.player4 || 0;
 
                 row.innerHTML = `
                     <td>${index + 1}</td>
-                    <td class="${p1Class}">${p1Score}</td>
-                    <td class="${p2Class}">${p2Score}</td>
-                    <td class="${p3Class}">${p3Score}</td>
-                    <td class="${p4Class}">${p4Score}</td>
+                    <td>${p1Score}</td>
+                    <td>${p2Score}</td>
+                    <td>${p3Score}</td>
+                    <td>${p4Score}</td>
                 `;
-                tableBody.appendChild(row);
+                scoresTableBody.appendChild(row);
             });
         }
 
-        // 清除分數 (只刪除 scoresHistory)
+        // 「成績表」：各玩家總分、勝場數、勝率
+        function calcSummary() {
+            // 若無資料
+            if (!scoresHistory.length) {
+                const summaryTableBody = document.getElementById('summaryTable').querySelector('tbody');
+                summaryTableBody.innerHTML = `
+                    <tr>
+                        <td colspan="4" class="no-data">尚無總成績</td>
+                    </tr>
+                `;
+                return;
+            }
+
+            // 建立四位玩家的統計物件
+            const stats = {
+                player1: { totalScore: 0, winCount: 0 },
+                player2: { totalScore: 0, winCount: 0 },
+                player3: { totalScore: 0, winCount: 0 },
+                player4: { totalScore: 0, winCount: 0 }
+            };
+
+            // 累計回合數
+            const totalRounds = scoresHistory.length;
+
+            scoresHistory.forEach(round => {
+                const p1 = round.scores.player1 || 0;
+                const p2 = round.scores.player2 || 0;
+                const p3 = round.scores.player3 || 0;
+                const p4 = round.scores.player4 || 0;
+
+                stats.player1.totalScore += p1;
+                stats.player2.totalScore += p2;
+                stats.player3.totalScore += p3;
+                stats.player4.totalScore += p4;
+
+                // 分數>0 視為勝場 (若您存了 winner，也可用 winner == 'player1')
+                if (p1 > 0) stats.player1.winCount++;
+                if (p2 > 0) stats.player2.winCount++;
+                if (p3 > 0) stats.player3.winCount++;
+                if (p4 > 0) stats.player4.winCount++;
+            });
+
+            // 渲染 summary table
+            const summaryTableBody = document.getElementById('summaryTable').querySelector('tbody');
+            summaryTableBody.innerHTML = '';
+
+            for (let i = 1; i <= 4; i++) {
+                const pid = `player${i}`;
+                const pName = players[pid] || `玩家${i}`;
+                const pScore = stats[pid].totalScore;
+                const pWinCount = stats[pid].winCount;
+                const pWinRate = totalRounds > 0
+                    ? Math.round((pWinCount / totalRounds) * 100)
+                    : 0;
+
+                const tr = document.createElement('tr');
+                // 若要為總分>0 加上 highlight
+                const scoreClass = (pScore > 0) ? 'highlight' : '';
+
+                tr.innerHTML = `
+                    <td>${pName}</td>
+                    <td class="${scoreClass}">${pScore}</td>
+                    <td>${pWinCount}</td>
+                    <td>${pWinRate}%</td>
+                `;
+                summaryTableBody.appendChild(tr);
+            }
+        }
+
+        // 按下「清除所有分數」只刪除 scoresHistory
         document.getElementById('clearScoresBtn').addEventListener('click', () => {
             if (confirm('確定要清除所有分數嗎？此動作無法恢復！')) {
                 localStorage.removeItem('scoresHistory');
@@ -158,8 +233,9 @@
             }
         });
 
-        // 初始化表格
+        // 初始化
         renderScores();
+        calcSummary();
     </script>
 </body>
 </html>
