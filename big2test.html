@@ -3,6 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>大老二 測試頁面</title>
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -33,70 +34,31 @@
         .switch-buttons button:hover {
             background-color: #505050;
         }
+        /* 內嵌頁面 (iframe) */
         iframe {
             width: 100%;
-            height: 500px;
+            height: 600px;
             border: none;
             box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
             border-radius: 5px;
-        }
-
-        /* 統計資訊的表格 */
-        .stats-table {
-            width: 100%;
-            border-collapse: collapse;
-            margin-top: 20px;
-        }
-        .stats-table th, .stats-table td {
-            border: 1px solid #ccc;
-            padding: 10px;
-            text-align: center;
-        }
-        .stats-table thead th {
-            background-color: #f4f4f4;
-            font-weight: bold;
-        }
-        .highlight {
-            color: red;
-            font-weight: bold;
-        }
-        .stats-title {
-            text-align: center;
-            font-size: 1.4em;
-            margin-top: 30px;
         }
     </style>
 </head>
 <body>
     <h1>大老二 測試頁面</h1>
 
+    <!-- 切換三個頁面的按鈕區 -->
     <div class="switch-buttons">
-        <button id="btnSetting">Setting</button>
-        <button id="btnCount">Count</button>
-        <button id="btnScore">Score</button>
+        <button id="btnSetting">Setting 頁</button>
+        <button id="btnCount">Count 頁</button>
+        <button id="btnScore">Score 頁</button>
     </div>
 
     <!-- 內嵌頁面 (iframe) -->
     <iframe id="testFrame" src="setting.html"></iframe>
 
-    <!-- 四位玩家成績統計區域 -->
-    <div class="stats-title">四位玩家成績</div>
-    <table class="stats-table" id="statsTable">
-        <thead>
-            <tr>
-                <th>玩家</th>
-                <th>總分</th>
-                <th>勝場數</th>
-                <th>勝率</th>
-            </tr>
-        </thead>
-        <tbody>
-            <!-- 由 calcStats() 動態插入 -->
-        </tbody>
-    </table>
-
     <script>
-        // === 原本的 iframe 切換 ===
+        // 保留原有 iframe 切換邏輯
         const btnSetting = document.getElementById('btnSetting');
         const btnCount   = document.getElementById('btnCount');
         const btnScore   = document.getElementById('btnScore');
@@ -104,108 +66,13 @@
 
         btnSetting.addEventListener('click', () => {
             testFrame.src = 'setting.html';
-            // 切換頁面後重新計算成績
-            calcStats();
         });
         btnCount.addEventListener('click', () => {
             testFrame.src = 'count.html';
-            // 切換頁面後重新計算成績
-            calcStats();
         });
         btnScore.addEventListener('click', () => {
             testFrame.src = 'score.html';
-            // 切換頁面後重新計算成績
-            calcStats();
         });
-
-        // === 讀取 localStorage 資料 ===
-        let players       = JSON.parse(localStorage.getItem('players')) || {
-            player1: "玩家 1",
-            player2: "玩家 2",
-            player3: "玩家 3",
-            player4: "玩家 4"
-        };
-
-        // stats 物件用來顯示最終統計
-        const stats = {
-            player1: { totalScore: 0, winCount: 0 },
-            player2: { totalScore: 0, winCount: 0 },
-            player3: { totalScore: 0, winCount: 0 },
-            player4: { totalScore: 0, winCount: 0 }
-        };
-
-        function calcStats() {
-            // 每次計算前先重置
-            for (let i = 1; i <= 4; i++) {
-                stats[`player${i}`].totalScore = 0;
-                stats[`player${i}`].winCount   = 0;
-            }
-
-            players = JSON.parse(localStorage.getItem('players')) || players; // 重新抓最新玩家名稱
-            const scoresHistory = JSON.parse(localStorage.getItem('scoresHistory')) || [];
-
-            if (!scoresHistory.length) {
-                // 如果沒有任何紀錄，就清空表格
-                const statsTableBody = document.getElementById('statsTable').querySelector('tbody');
-                statsTableBody.innerHTML = `
-                    <tr>
-                        <td colspan="4">目前沒有分數紀錄</td>
-                    </tr>
-                `;
-                return;
-            }
-
-            // 計算四位玩家的「總分、勝場數」
-            let totalRounds = scoresHistory.length;
-            scoresHistory.forEach(round => {
-                const p1Score = round.scores?.player1 || 0;
-                const p2Score = round.scores?.player2 || 0;
-                const p3Score = round.scores?.player3 || 0;
-                const p4Score = round.scores?.player4 || 0;
-
-                stats.player1.totalScore += p1Score;
-                stats.player2.totalScore += p2Score;
-                stats.player3.totalScore += p3Score;
-                stats.player4.totalScore += p4Score;
-
-                // 分數 > 0 視為勝場
-                if (p1Score > 0) stats.player1.winCount++;
-                if (p2Score > 0) stats.player2.winCount++;
-                if (p3Score > 0) stats.player3.winCount++;
-                if (p4Score > 0) stats.player4.winCount++;
-            });
-
-            // 重新渲染表格
-            renderStatsTable(totalRounds);
-        }
-
-        function renderStatsTable(totalRounds) {
-            const statsTableBody = document.getElementById('statsTable').querySelector('tbody');
-            statsTableBody.innerHTML = '';
-
-            for (let i = 1; i <= 4; i++) {
-                const pid = `player${i}`;
-                const pName = players[pid] || `玩家 ${i}`;
-                const pScore = stats[pid].totalScore;
-                const pWinCount = stats[pid].winCount;
-                // 若無紀錄則勝率=0
-                const pWinRate = totalRounds > 0 ? Math.round((pWinCount / totalRounds) * 100) : 0;
-                // 若總分>0則以紅字顯示
-                const scoreClass = (pScore > 0) ? 'highlight' : '';
-
-                const row = document.createElement('tr');
-                row.innerHTML = `
-                    <td>${pName}</td>
-                    <td class="${scoreClass}">${pScore}</td>
-                    <td>${pWinCount}</td>
-                    <td>${pWinRate}%</td>
-                `;
-                statsTableBody.appendChild(row);
-            }
-        }
-
-        // 初始化頁面時先計算一次
-        calcStats();
     </script>
 </body>
 </html>
