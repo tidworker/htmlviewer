@@ -1,8 +1,8 @@
 <!DOCTYPE html>
 <html lang="zh-TW">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
     <title>設定遊戲規則</title>
     <style>
         body {
@@ -33,6 +33,7 @@
             border-radius: 5px;
             box-sizing: border-box;
         }
+        /* Checkbox 群組 */
         .checkbox-group label {
             display: block;
             margin-bottom: 5px;
@@ -41,6 +42,7 @@
         input[type="checkbox"] {
             margin-right: 10px;
         }
+        /* 儲存按鈕 */
         button {
             display: block;
             width: 100%;
@@ -112,6 +114,7 @@
     </form>
 
     <script>
+        // 1) 初始化設定：若已有 localStorage，帶入；否則使用預設
         function initializeSettings() {
             const existingPlayers = JSON.parse(localStorage.getItem('players')) || {
                 player1: "玩家1",
@@ -128,48 +131,57 @@
                 }
             };
 
-            // 填入玩家名稱
+            // 預先填好輸入框
             document.getElementById('player1').value = existingPlayers.player1;
             document.getElementById('player2').value = existingPlayers.player2;
             document.getElementById('player3').value = existingPlayers.player3;
             document.getElementById('player4').value = existingPlayers.player4;
 
-            // 填入倍率
             document.getElementById('multiplier').value = existingSettings.multiplier;
-
-            // 勾選
             document.getElementById('rule7').checked  = existingSettings.rules.rule7;
             document.getElementById('rule10').checked = existingSettings.rules.rule10;
             document.getElementById('rule13').checked = existingSettings.rules.rule13;
         }
 
-        document.getElementById('saveButton').addEventListener('click', function() {
-            // 收集玩家名稱
-            const players = {
-                player1: document.getElementById('player1').value.trim(),
-                player2: document.getElementById('player2').value.trim(),
-                player3: document.getElementById('player3').value.trim(),
-                player4: document.getElementById('player4').value.trim()
-            };
+        // 2) 點選輸入欄位時自動清空
+        function enableAutoClearOnFocus() {
+            const inputs = document.querySelectorAll('#settingsForm input[type="text"], #settingsForm input[type="number"]');
+            inputs.forEach(input => {
+                input.addEventListener('focus', () => {
+                    input.value = "";
+                });
+            });
+        }
 
-            // 收集規則
-            const settings = {
-                multiplier: parseFloat(document.getElementById('multiplier').value),
-                rules: {
-                    rule7:  document.getElementById('rule7').checked,
-                    rule10: document.getElementById('rule10').checked,
-                    rule13: document.getElementById('rule13').checked
-                }
-            };
+        // 3) 儲存設定 => 寫入 localStorage
+        function setupSaveButton() {
+            const saveBtn = document.getElementById('saveButton');
+            saveBtn.addEventListener('click', () => {
+                const players = {
+                    player1: document.getElementById('player1').value.trim(),
+                    player2: document.getElementById('player2').value.trim(),
+                    player3: document.getElementById('player3').value.trim(),
+                    player4: document.getElementById('player4').value.trim()
+                };
+                const settings = {
+                    multiplier: parseFloat(document.getElementById('multiplier').value),
+                    rules: {
+                        rule7:  document.getElementById('rule7').checked,
+                        rule10: document.getElementById('rule10').checked,
+                        rule13: document.getElementById('rule13').checked
+                    }
+                };
 
-            localStorage.setItem('players', JSON.stringify(players));
-            localStorage.setItem('settings', JSON.stringify(settings));
+                localStorage.setItem('players', JSON.stringify(players));
+                localStorage.setItem('settings', JSON.stringify(settings));
+                alert('設定已儲存！');
+            });
+        }
 
-            alert('設定已儲存！');
-        });
-
-        // 初始化
+        // 4) 網頁載入
         initializeSettings();
+        enableAutoClearOnFocus();
+        setupSaveButton();
     </script>
 </body>
 </html>
