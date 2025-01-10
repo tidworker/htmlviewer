@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>比賽結果一覽 - 大老二</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 10px;
+            line-height: 1.6;
+            background-color: #FFFFFF;
+            color: #333;
+        }
+        h1 {
+            text-align: center;
+            font-size: 1.8em;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+        thead th {
+            background-color: #f4f4f4;
+            font-weight: bold;
+        }
+        th, td {
+            border: 1px solid #ccc;
+            padding: 10px;
+            text-align: center;
+        }
+        .no-data {
+            text-align: center;
+            padding: 20px;
+        }
+        .buttons {
+            margin: 20px 0;
+            text-align: center;
+        }
+        button {
+            padding: 10px 20px;
+            font-size: 1.2em;
+            color: white;
+            background-color: #707070;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 0 10px;
+        }
+        button:hover {
+            background-color: #505050;
+        }
+        .delete-btn {
+            background-color: #d9534f;
+        }
+        .delete-btn:hover {
+            background-color: #c9302c;
+        }
+    </style>
+</head>
+<body>
+    <h1>比賽結果一覽</h1>
+
+    <!-- 賽局結果的表格 -->
+    <table id="scoresTable">
+        <thead>
+            <tr>
+                <th>回合</th>
+                <th>玩家 1 分數</th>
+                <th>玩家 2 分數</th>
+                <th>玩家 3 分數</th>
+                <th>玩家 4 分數</th>
+                <th>勝方</th>
+            </tr>
+        </thead>
+        <tbody>
+            <!-- 由 JavaScript 動態插入 -->
+        </tbody>
+    </table>
+
+    <div class="buttons">
+        <!-- 可選：若想同時在這頁清除分數，可以保留這個按鈕；否則可刪除 -->
+        <button id="clearScoresBtn" class="delete-btn">清除所有分數</button>
+    </div>
+
+    <script>
+        // 讀取 scoresHistory
+        const scoresHistory = JSON.parse(localStorage.getItem('scoresHistory')) || [];
+
+        // 建立表格內容
+        function renderScores() {
+            const scoresTable = document.getElementById('scoresTable');
+            const tableBody = scoresTable.querySelector('tbody');
+
+            // 若無資料，顯示提示訊息
+            if (scoresHistory.length === 0) {
+                tableBody.innerHTML = `
+                    <tr>
+                        <td colspan="6" class="no-data">目前沒有任何分數紀錄</td>
+                    </tr>
+                `;
+                return;
+            }
+
+            // 若有資料，逐筆產生表格列
+            tableBody.innerHTML = ''; // 清空
+            scoresHistory.forEach((roundData, index) => {
+                const row = document.createElement('tr');
+
+                // roundData.scores 為 { player1: -xx, player2: -yy, ... }
+                // roundData.winner 為某個玩家名稱
+                row.innerHTML = `
+                    <td>${index + 1}</td>
+                    <td>${roundData.scores.player1 || 0}</td>
+                    <td>${roundData.scores.player2 || 0}</td>
+                    <td>${roundData.scores.player3 || 0}</td>
+                    <td>${roundData.scores.player4 || 0}</td>
+                    <td>${roundData.winner || '—'}</td>
+                `;
+                tableBody.appendChild(row);
+            });
+        }
+
+        // 清除分數 (可選)
+        document.getElementById('clearScoresBtn').addEventListener('click', () => {
+            if (confirm('確定要清除所有分數嗎？此動作無法恢復！')) {
+                localStorage.removeItem('scoresHistory');
+                alert('分數紀錄已清除！');
+                location.reload();
+            }
+        });
+
+        // 初始化表格
+        renderScores();
+    </script>
+</body>
+</html>
