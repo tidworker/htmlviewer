@@ -36,7 +36,7 @@
         }
         iframe {
             width: 100%;
-            height: 500px;
+            height: 600px;
             border: none;
             box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
             border-radius: 5px;
@@ -71,11 +71,10 @@
 <body>
     <h1>大老二 測試頁面</h1>
 
-    <!-- 切換三個頁面的按鈕區 -->
     <div class="switch-buttons">
-        <button id="btnSetting">設定</button>
-        <button id="btnCount">計分</button>
-        <button id="btnScore">結果</button>
+        <button id="btnSetting">Setting 頁</button>
+        <button id="btnCount">Count 頁</button>
+        <button id="btnScore">Score 頁</button>
     </div>
 
     <!-- 內嵌頁面 (iframe) -->
@@ -98,7 +97,7 @@
     </table>
 
     <script>
-        // 保留原切換 iframe 功能
+        // === 原本的 iframe 切換 ===
         const btnSetting = document.getElementById('btnSetting');
         const btnCount   = document.getElementById('btnCount');
         const btnScore   = document.getElementById('btnScore');
@@ -106,24 +105,29 @@
 
         btnSetting.addEventListener('click', () => {
             testFrame.src = 'setting.html';
+            // 切換頁面後重新計算成績
+            calcStats();
         });
         btnCount.addEventListener('click', () => {
             testFrame.src = 'count.html';
+            // 切換頁面後重新計算成績
+            calcStats();
         });
         btnScore.addEventListener('click', () => {
             testFrame.src = 'score.html';
+            // 切換頁面後重新計算成績
+            calcStats();
         });
 
-        // 讀取本地資料
-        const players = JSON.parse(localStorage.getItem('players')) || {
+        // === 讀取 localStorage 資料 ===
+        let players       = JSON.parse(localStorage.getItem('players')) || {
             player1: "玩家 1",
             player2: "玩家 2",
             player3: "玩家 3",
             player4: "玩家 4"
         };
-        const scoresHistory = JSON.parse(localStorage.getItem('scoresHistory')) || [];
 
-        // 建立用於保存每位玩家成績的物件
+        // stats 物件用來顯示最終統計
         const stats = {
             player1: { totalScore: 0, winCount: 0 },
             player2: { totalScore: 0, winCount: 0 },
@@ -131,75 +135,77 @@
             player4: { totalScore: 0, winCount: 0 }
         };
 
-        /*
-            如果 "勝場數" 與 "勝率" 的判斷依賴
-            scoresHistory中紀錄的 "scores[playerX]" 是否為正分，
-            我們就假設 playerX 分數 > 0 => 該回合該player勝利
-
-            如果您在 scoresHistory 的 roundData 有 "winner" 屬性，
-            也可以透過 roundData.winner === 'player1' 來判斷誰勝利。
-        */
-
         function calcStats() {
-            // 若無歷史數據
-            if (!scoresHistory.length) return;
+            // 每次計算前先重置
+            for (let i = 1; i <= 4; i++) {
+                stats[`player${i}`].totalScore = 0;
+                stats[`player${i}`].winCount   = 0;
+            }
 
+            players = JSON.parse(localStorage.getItem('players')) || players; // 重新抓最新玩家名稱
+            const scoresHistory = JSON.parse(localStorage.getItem('scoresHistory')) || [];
+
+            if (!scoresHistory.length) {
+                // 如果沒有任何紀錄，就清空表格
+                const statsTableBody = document.getElementById('statsTable').querySelector('tbody');
+                statsTableBody.innerHTML = `
+                    <tr>
+                        <td colspan="4">目前沒有分數紀錄</td>
+                    </tr>
+                `;
+                return;
+            }
+
+            // 計算四位玩家的「總分、勝場數」
             let totalRounds = scoresHistory.length;
-
-            // 依序遍歷每回合
             scoresHistory.forEach(round => {
-                // 取得各玩家該回合的分數
                 const p1Score = round.scores?.player1 || 0;
                 const p2Score = round.scores?.player2 || 0;
                 const p3Score = round.scores?.player3 || 0;
                 const p4Score = round.scores?.player4 || 0;
 
-                // 累加到 totalScore
                 stats.player1.totalScore += p1Score;
                 stats.player2.totalScore += p2Score;
                 stats.player3.totalScore += p3Score;
                 stats.player4.totalScore += p4Score;
 
-                // 如果該玩家分數 > 0，就視為該回合勝利
+                // 分數 > 0 視為勝場
                 if (p1Score > 0) stats.player1.winCount++;
                 if (p2Score > 0) stats.player2.winCount++;
                 if (p3Score > 0) stats.player3.winCount++;
                 if (p4Score > 0) stats.player4.winCount++;
             });
 
-            // 建立顯示表格
-            const statsTable = document.getElementById('statsTable').querySelector('tbody');
-            statsTable.innerHTML = ''; // 清空
+            // 重新渲染表格
+            renderStatsTable(totalRounds);
+        }
 
-            // 對 player1 ~ player4 依序插入一列
+        function renderStatsTable(totalRounds) {
+            const statsTableBody = document.getElementById('statsTable').querySelector('tbody');
+            statsTableBody.innerHTML = '';
+
             for (let i = 1; i <= 4; i++) {
                 const pid = `player${i}`;
-                const playerName = players[pid] || `玩家 ${i}`;
-                const totalScore = stats[pid].totalScore;
-                const winCount   = stats[pid].winCount;
-                let winRate = 0;
+                const pName = players[pid] || `玩家 ${i}`;
+                const pScore = stats[pid].totalScore;
+                const pWinCount = stats[pid].winCount;
+                // 若無紀錄則勝率=0
+                const pWinRate = totalRounds > 0 ? Math.round((pWinCount / totalRounds) * 100) : 0;
+                // 若總分>0則以紅字顯示
+                const scoreClass = (pScore > 0) ? 'highlight' : '';
 
-                if (scoresHistory.length > 0) {
-                    // 勝率 = (勝場數 / 總回合數) * 100
-                    winRate = Math.round( (winCount / scoresHistory.length) * 100 );
-                }
-
-                // 建立一個表格列
-                const tr = document.createElement('tr');
-                // 如果 totalScore > 0，就讓它呈現紅字
-                const scoreClass = (totalScore > 0) ? 'highlight' : '';
-
-                tr.innerHTML = `
-                    <td>${playerName}</td>
-                    <td class="${scoreClass}">${totalScore}</td>
-                    <td>${winCount}</td>
-                    <td>${winRate}%</td>
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${pName}</td>
+                    <td class="${scoreClass}">${pScore}</td>
+                    <td>${pWinCount}</td>
+                    <td>${pWinRate}%</td>
                 `;
-                statsTable.appendChild(tr);
+                statsTableBody.appendChild(row);
             }
         }
 
-        // 執行計算與渲染
+        // 初始化頁面時先計算一次
         calcStats();
     </script>
 </body>
