@@ -149,7 +149,7 @@
   </style>
 </head>
 <body>
-  <h1>大老二計分</h1>
+  <br>
 
   <!-- 主頁面規則顯示 -->
   <div class="rules" id="rulesDisplay">規則：讀取中...</div>
@@ -160,6 +160,8 @@
       <button id="player3Btn">玩家 3</button>
       <button id="player4Btn">玩家 4</button>
   </div>
+
+<h1>點選贏家開始計分</h1>
 
   <div class="overlay" id="overlay"></div>
   <div class="modal" id="confirmWinnerModal">
@@ -213,12 +215,31 @@
 
     // 2) 規則顯示
     function updateRulesDisplay() {
-      const rules = settings.rules;
-      const rulesText = `規則：倍率 ${settings.multiplier} | Double ${
-          rules.rule7 ? '7張, ' : ''
-      }${rules.rule10 ? '10張, ' : ''}${rules.rule13 ? '13張' : ''}`.replace(/,\s*$/, '');
-      document.getElementById('rulesDisplay').innerText = rulesText;
+    // 假設 settings 裡有 multiplier，以及 rules: { rule7, rule10, rule13 }
+    const { multiplier, rules } = settings;
+
+    let doubleText = '';
+    if (rules.rule7 || rules.rule10 || rules.rule13) {
+        // 若有勾選至少一項，逐項拼接
+        if (rules.rule7)  doubleText += '7張, ';
+        if (rules.rule10) doubleText += '10張, ';
+        if (rules.rule13) doubleText += '13張, ';
+        // 去除最後多餘的 ", "
+        doubleText = doubleText.replace(/,\s*$/, '');
+    } else {
+        // 全部沒勾選 => 顯示「無」
+        doubleText = '無';
     }
+
+    // 倍率(若沒給值則設1)
+    const multi = multiplier || 1;
+
+    // 組合顯示字串
+    const rulesText = `規則：倍率 ${multi} | Double ${doubleText}`;
+
+    // 將文字塞回頁面
+    document.getElementById('rulesDisplay').innerText = rulesText;
+}
     updateRulesDisplay();
 
     // 3) 更新玩家按鈕文字
