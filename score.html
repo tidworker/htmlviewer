@@ -1,8 +1,8 @@
 <!DOCTYPE html>
 <html lang="zh-TW">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
     <title>比賽結果一覽 - 大老二</title>
     <style>
         body {
@@ -16,6 +16,7 @@
             text-align: center;
             font-size: 1.8em;
         }
+        /* 成績表(總成績) + 逐場成績表格 */
         .summary-table, .history-table {
             width: 100%;
             border-collapse: collapse;
@@ -59,7 +60,6 @@
         .delete-btn:hover {
             background-color: #c9302c;
         }
-        /* 若要強調分數為正數可用這樣的高亮 */
         .highlight {
             color: red;
             font-weight: bold;
@@ -96,10 +96,11 @@
         <thead>
             <tr>
                 <th>回合</th>
-                <th>玩家 1 分數</th>
-                <th>玩家 2 分數</th>
-                <th>玩家 3 分數</th>
-                <th>玩家 4 分數</th>
+                <!-- 玩家名稱表頭改用設定頁面 players 中的名稱 -->
+                <th id="p1Name"></th>
+                <th id="p2Name"></th>
+                <th id="p3Name"></th>
+                <th id="p4Name"></th>
             </tr>
         </thead>
         <tbody>
@@ -112,10 +113,8 @@
     </div>
 
     <script>
-        // 讀取 scoresHistory
+        // 從 localStorage 讀取資料
         let scoresHistory = JSON.parse(localStorage.getItem('scoresHistory')) || [];
-
-        // 同時讀取 players 用於成績表顯示名稱
         let players = JSON.parse(localStorage.getItem('players')) || {
             player1: "玩家 1",
             player2: "玩家 2",
@@ -123,43 +122,18 @@
             player4: "玩家 4"
         };
 
-        // 「逐場成績」的表格初始化
-        function renderScores() {
-            const scoresTableBody = document.getElementById('scoresTable').querySelector('tbody');
+        // 將逐場成績表格的欄位名稱改為 players 中對應的名稱
+        document.getElementById('p1Name').textContent = players.player1;
+        document.getElementById('p2Name').textContent = players.player2;
+        document.getElementById('p3Name').textContent = players.player3;
+        document.getElementById('p4Name').textContent = players.player4;
 
-            if (scoresHistory.length === 0) {
-                scoresTableBody.innerHTML = `
-                    <tr>
-                        <td colspan="5" class="no-data">目前沒有任何分數紀錄</td>
-                    </tr>
-                `;
-                return;
-            }
-
-            scoresTableBody.innerHTML = '';
-            scoresHistory.forEach((roundData, index) => {
-                const row = document.createElement('tr');
-                const p1Score = roundData.scores.player1 || 0;
-                const p2Score = roundData.scores.player2 || 0;
-                const p3Score = roundData.scores.player3 || 0;
-                const p4Score = roundData.scores.player4 || 0;
-
-                row.innerHTML = `
-                    <td>${index + 1}</td>
-                    <td>${p1Score}</td>
-                    <td>${p2Score}</td>
-                    <td>${p3Score}</td>
-                    <td>${p4Score}</td>
-                `;
-                scoresTableBody.appendChild(row);
-            });
-        }
-
-        // 「成績表」：各玩家總分、勝場數、勝率
+        // 1) 計算與渲染「成績表」(四位玩家總分、勝場數、勝率)
         function calcSummary() {
+            const summaryTableBody = document.getElementById('summaryTable').querySelector('tbody');
+
             // 若無資料
             if (!scoresHistory.length) {
-                const summaryTableBody = document.getElementById('summaryTable').querySelector('tbody');
                 summaryTableBody.innerHTML = `
                     <tr>
                         <td colspan="4" class="no-data">尚無總成績</td>
@@ -175,47 +149,43 @@
                 player3: { totalScore: 0, winCount: 0 },
                 player4: { totalScore: 0, winCount: 0 }
             };
-
-            // 累計回合數
             const totalRounds = scoresHistory.length;
 
+            // 遍歷每場紀錄
             scoresHistory.forEach(round => {
-                const p1 = round.scores.player1 || 0;
-                const p2 = round.scores.player2 || 0;
-                const p3 = round.scores.player3 || 0;
-                const p4 = round.scores.player4 || 0;
+                const p1 = round.scores?.player1 || 0;
+                const p2 = round.scores?.player2 || 0;
+                const p3 = round.scores?.player3 || 0;
+                const p4 = round.scores?.player4 || 0;
 
                 stats.player1.totalScore += p1;
                 stats.player2.totalScore += p2;
                 stats.player3.totalScore += p3;
                 stats.player4.totalScore += p4;
 
-                // 分數>0 視為勝場 (若您存了 winner，也可用 winner == 'player1')
+                // 分數 > 0 視為該玩家該場勝利
                 if (p1 > 0) stats.player1.winCount++;
                 if (p2 > 0) stats.player2.winCount++;
                 if (p3 > 0) stats.player3.winCount++;
                 if (p4 > 0) stats.player4.winCount++;
             });
 
-            // 渲染 summary table
-            const summaryTableBody = document.getElementById('summaryTable').querySelector('tbody');
             summaryTableBody.innerHTML = '';
-
             for (let i = 1; i <= 4; i++) {
                 const pid = `player${i}`;
-                const pName = players[pid] || `玩家${i}`;
+                const playerName = players[pid] || `玩家 ${i}`;
                 const pScore = stats[pid].totalScore;
                 const pWinCount = stats[pid].winCount;
                 const pWinRate = totalRounds > 0
                     ? Math.round((pWinCount / totalRounds) * 100)
                     : 0;
 
-                const tr = document.createElement('tr');
-                // 若要為總分>0 加上 highlight
+                // 若要正分紅字
                 const scoreClass = (pScore > 0) ? 'highlight' : '';
 
+                const tr = document.createElement('tr');
                 tr.innerHTML = `
-                    <td>${pName}</td>
+                    <td>${playerName}</td>
                     <td class="${scoreClass}">${pScore}</td>
                     <td>${pWinCount}</td>
                     <td>${pWinRate}%</td>
@@ -224,7 +194,48 @@
             }
         }
 
-        // 按下「清除所有分數」只刪除 scoresHistory
+        // 2) 顯示「逐場成績」： 最新場次顯示在最上方
+        function renderScores() {
+            const scoresTableBody = document.getElementById('scoresTable').querySelector('tbody');
+
+            // 若無紀錄
+            if (!scoresHistory.length) {
+                scoresTableBody.innerHTML = `
+                    <tr>
+                        <td colspan="5" class="no-data">目前沒有任何分數紀錄</td>
+                    </tr>
+                `;
+                return;
+            }
+
+            // 先清空
+            scoresTableBody.innerHTML = '';
+            
+            // 最新場次顯示在最上方 => 逆序遍歷 scoresHistory
+            for (let idx = scoresHistory.length - 1; idx >= 0; idx--) {
+                const roundData = scoresHistory[idx];
+                const row = document.createElement('tr');
+                const p1Score = roundData.scores.player1 || 0;
+                const p2Score = roundData.scores.player2 || 0;
+                const p3Score = roundData.scores.player3 || 0;
+                const p4Score = roundData.scores.player4 || 0;
+
+                // idx 從最後往前 => (scoresHistory.length - idx) => "回合"顯示
+                const roundNum = idx + 1; 
+                // 或者您想顯示為 (scoresHistory.length - idx)，即 1=最新 => 自行調整
+
+                row.innerHTML = `
+                    <td>${roundNum}</td>
+                    <td>${p1Score}</td>
+                    <td>${p2Score}</td>
+                    <td>${p3Score}</td>
+                    <td>${p4Score}</td>
+                `;
+                scoresTableBody.appendChild(row);
+            }
+        }
+
+        // 3) 清除分數
         document.getElementById('clearScoresBtn').addEventListener('click', () => {
             if (confirm('確定要清除所有分數嗎？此動作無法恢復！')) {
                 localStorage.removeItem('scoresHistory');
@@ -233,9 +244,9 @@
             }
         });
 
-        // 初始化
-        renderScores();
+        // 初始化：計算 & 顯示
         calcSummary();
+        renderScores();
     </script>
 </body>
 </html>
