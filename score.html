@@ -57,6 +57,10 @@
         .delete-btn:hover {
             background-color: #c9302c;
         }
+        /* 顯示正整數為紅色 */
+        .positive {
+            color: red;
+        }
     </style>
 </head>
 <body>
@@ -67,11 +71,12 @@
         <thead>
             <tr>
                 <th>回合</th>
-                <th>玩家 1 分數</th>
-                <th>玩家 2 分數</th>
-                <th>玩家 3 分數</th>
-                <th>玩家 4 分數</th>
-                <th>勝方</th>
+                <!-- 以下標題改用玩家自訂名稱 -->
+                <th id="player1Header"></th>
+                <th id="player2Header"></th>
+                <th id="player3Header"></th>
+                <th id="player4Header"></th>
+                <!-- 移除「勝方」欄位 -->
             </tr>
         </thead>
         <tbody>
@@ -80,24 +85,37 @@
     </table>
 
     <div class="buttons">
-        <!-- 可選：若想同時在這頁清除分數，可以保留這個按鈕；否則可刪除 -->
+        <!-- 按下後只清除 scoresHistory，保留玩家名稱與設定 -->
         <button id="clearScoresBtn" class="delete-btn">清除所有分數</button>
     </div>
 
     <script>
-        // 讀取 scoresHistory
+        // 讀取本地資料
+        const players = JSON.parse(localStorage.getItem('players')) || {
+            player1: "玩家 1",
+            player2: "玩家 2",
+            player3: "玩家 3",
+            player4: "玩家 4"
+        };
         const scoresHistory = JSON.parse(localStorage.getItem('scoresHistory')) || [];
+
+        // 取得表格
+        const scoresTable = document.getElementById('scoresTable');
+        const tableBody = scoresTable.querySelector('tbody');
+
+        // 將標題欄改為自訂玩家名稱
+        document.getElementById('player1Header').textContent = players.player1;
+        document.getElementById('player2Header').textContent = players.player2;
+        document.getElementById('player3Header').textContent = players.player3;
+        document.getElementById('player4Header').textContent = players.player4;
 
         // 建立表格內容
         function renderScores() {
-            const scoresTable = document.getElementById('scoresTable');
-            const tableBody = scoresTable.querySelector('tbody');
-
             // 若無資料，顯示提示訊息
             if (scoresHistory.length === 0) {
                 tableBody.innerHTML = `
                     <tr>
-                        <td colspan="6" class="no-data">目前沒有任何分數紀錄</td>
+                        <td colspan="5" class="no-data">目前沒有任何分數紀錄</td>
                     </tr>
                 `;
                 return;
@@ -108,21 +126,30 @@
             scoresHistory.forEach((roundData, index) => {
                 const row = document.createElement('tr');
 
-                // roundData.scores 為 { player1: -xx, player2: -yy, ... }
-                // roundData.winner 為某個玩家名稱
+                // 取得玩家分數
+                const p1Score = parseInt(roundData.scores.player1, 10) || 0;
+                const p2Score = parseInt(roundData.scores.player2, 10) || 0;
+                const p3Score = parseInt(roundData.scores.player3, 10) || 0;
+                const p4Score = parseInt(roundData.scores.player4, 10) || 0;
+
+                // 為正整數的分數添加紅色樣式
+                const p1Class = (p1Score > 0) ? 'positive' : '';
+                const p2Class = (p2Score > 0) ? 'positive' : '';
+                const p3Class = (p3Score > 0) ? 'positive' : '';
+                const p4Class = (p4Score > 0) ? 'positive' : '';
+
                 row.innerHTML = `
                     <td>${index + 1}</td>
-                    <td>${roundData.scores.player1 || 0}</td>
-                    <td>${roundData.scores.player2 || 0}</td>
-                    <td>${roundData.scores.player3 || 0}</td>
-                    <td>${roundData.scores.player4 || 0}</td>
-                    <td>${roundData.winner || '—'}</td>
+                    <td class="${p1Class}">${p1Score}</td>
+                    <td class="${p2Class}">${p2Score}</td>
+                    <td class="${p3Class}">${p3Score}</td>
+                    <td class="${p4Class}">${p4Score}</td>
                 `;
                 tableBody.appendChild(row);
             });
         }
 
-        // 清除分數 (可選)
+        // 清除分數 (只刪除 scoresHistory)
         document.getElementById('clearScoresBtn').addEventListener('click', () => {
             if (confirm('確定要清除所有分數嗎？此動作無法恢復！')) {
                 localStorage.removeItem('scoresHistory');
