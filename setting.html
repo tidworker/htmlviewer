@@ -5,11 +5,12 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>設定遊戲規則</title>
     <style>
+        /* 與 count / score 頁面風格一致 */
         body {
             font-family: Arial, sans-serif;
             margin: 10px;
             line-height: 1.6;
-            background-color: #f9f9f9;
+            background-color: #FFFFFF; /* 統一背景 */
             color: #333;
         }
         h1 {
@@ -41,20 +42,21 @@
         input[type="checkbox"] {
             margin-right: 10px;
         }
+        /* 與 count / score 頁面的按鈕樣式一致 */
         button {
             display: block;
             width: 100%;
             padding: 12px;
             font-size: 1.2em;
             font-weight: bold;
-            background-color: #4CAF50;
+            background-color: #707070;
             color: white;
             border: none;
             border-radius: 5px;
             cursor: pointer;
         }
         button:hover {
-            background-color: #45a049;
+            opacity: 0.8; /* 與 count 頁面一致的 hover 效果 */
         }
         @media (max-width: 600px) {
             h1 {
@@ -112,6 +114,34 @@
     </form>
 
     <script>
+        // 先讀取現有的 players / settings，若有資料，就帶入表單
+        const existingPlayers = JSON.parse(localStorage.getItem('players')) || {};
+        const existingSettings = JSON.parse(localStorage.getItem('settings')) || {};
+
+        // 如果已經有 players 資料，填入輸入欄
+        if (existingPlayers.player1) {
+            document.getElementById('player1').value = existingPlayers.player1;
+        }
+        if (existingPlayers.player2) {
+            document.getElementById('player2').value = existingPlayers.player2;
+        }
+        if (existingPlayers.player3) {
+            document.getElementById('player3').value = existingPlayers.player3;
+        }
+        if (existingPlayers.player4) {
+            document.getElementById('player4').value = existingPlayers.player4;
+        }
+
+        // 如果有 settings 資料，填入倍率與規則
+        if (existingSettings.multiplier) {
+            document.getElementById('multiplier').value = existingSettings.multiplier;
+        }
+        if (existingSettings.rules) {
+            document.getElementById('rule7').checked  = !!existingSettings.rules.rule7;
+            document.getElementById('rule10').checked = !!existingSettings.rules.rule10;
+            document.getElementById('rule13').checked = !!existingSettings.rules.rule13;
+        }
+
         document.getElementById('saveButton').addEventListener('click', function() {
             // 收集玩家名稱
             const players = {
@@ -135,7 +165,7 @@
             localStorage.setItem('players', JSON.stringify(players));
             localStorage.setItem('settings', JSON.stringify(settings));
 
-            alert('設定已儲存！');
+            alert('設定已儲存！\n玩家與規則資料均已更新。');
         });
     </script>
 </body>
