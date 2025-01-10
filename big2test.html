@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>大老二 測試頁面</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 10px;
+            line-height: 1.6;
+            background-color: #FFFFFF;
+            color: #333;
+        }
+        h1 {
+            text-align: center;
+            font-size: 1.8em;
+        }
+        .switch-buttons {
+            display: flex;
+            justify-content: center;
+            margin: 20px 0;
+        }
+        .switch-buttons button {
+            padding: 10px 20px;
+            font-size: 1.2em;
+            color: white;
+            background-color: #707070;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 0 10px;
+        }
+        .switch-buttons button:hover {
+            background-color: #505050;
+        }
+        /* 可自行調整 iframe 大小 */
+        iframe {
+            width: 100%;
+            height: 600px;
+            border: none;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+            border-radius: 5px;
+        }
+    </style>
+</head>
+<body>
+    <h1>大老二 測試頁面</h1>
+
+    <!-- 切換三個頁面的按鈕區 -->
+    <div class="switch-buttons">
+        <button id="btnSetting">Setting 頁</button>
+        <button id="btnCount">Count 頁</button>
+        <button id="btnScore">Score 頁</button>
+    </div>
+
+    <!-- 內嵌頁面 (iframe) -->
+    <iframe id="testFrame" src="setting.html"></iframe>
+
+    <script>
+        // 取得按鈕
+        const btnSetting = document.getElementById('btnSetting');
+        const btnCount = document.getElementById('btnCount');
+        const btnScore = document.getElementById('btnScore');
+
+        // 取得 iframe
+        const testFrame = document.getElementById('testFrame');
+
+        // 點擊切換到 setting.html
+        btnSetting.addEventListener('click', () => {
+            testFrame.src = 'setting.html';
+        });
+
+        // 點擊切換到 count.html
+        btnCount.addEventListener('click', () => {
+            testFrame.src = 'count.html';
+        });
+
+        // 點擊切換到 score.html
+        btnScore.addEventListener('click', () => {
+            testFrame.src = 'score.html';
+        });
+    </script>
+</body>
+</html>
