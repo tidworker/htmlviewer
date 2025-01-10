@@ -152,6 +152,23 @@
             margin-top: 10px;
             font-size: 1.2em;
         }
+
+        /* ↓↓↓↓↓ 新增：清除分數按鈕樣式（若需自定義） ↓↓↓↓↓ */
+        .clearScoresBtn {
+            display: block;
+            margin: 20px auto;
+            padding: 10px 20px;
+            background-color: #d9534f;
+            color: white;
+            font-size: 1.2em;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        .clearScoresBtn:hover {
+            background-color: #c9302c;
+        }
+        /* ↑↑↑↑↑ 新增：清除分數按鈕樣式 ↑↑↑↑↑ */
     </style>
 </head>
 <body>
@@ -201,6 +218,10 @@
         <button id="confirmScore" class="action">確定</button>
     </div>
 
+    <!-- ↓↓↓↓↓ 新增：清除分數按鈕 ↓↓↓↓↓ -->
+    <button class="clearScoresBtn" id="clearScoresBtn">清除所有分數</button>
+    <!-- ↑↑↑↑↑ 新增：清除分數按鈕 ↑↑↑↑↑ -->
+
     <script>
         const players = JSON.parse(localStorage.getItem('players'));
         const settings = JSON.parse(localStorage.getItem('settings'));
@@ -243,18 +264,18 @@
         });
 
         document.getElementById('confirmWinnerBtn').addEventListener('click', () => {
-    losers.length = 0;
-    for (let i = 1; i <= 4; i++) {
-        if (i !== winner) losers.push(i);
-    }
-    currentLoserIndex = 0;
+            losers.length = 0;
+            for (let i = 1; i <= 4; i++) {
+                if (i !== winner) losers.push(i);
+            }
+            currentLoserIndex = 0;
 
-    // 關閉確認視窗
-    document.getElementById('confirmWinnerModal').style.display = 'none';
-    document.getElementById('overlay').style.display = 'none';
+            document.getElementById('confirmWinnerModal').style.display = 'none';
+            document.getElementById('overlay').style.display = 'none';
 
-    showModal(losers[currentLoserIndex]);
-});
+            showModal(losers[currentLoserIndex]);
+        });
+
         document.getElementById('cancelWinnerBtn').addEventListener('click', () => {
             document.getElementById('confirmWinnerModal').style.display = 'none';
             document.getElementById('overlay').style.display = 'none';
@@ -356,6 +377,14 @@
 
             console.log('分數記錄已更新:', scoresHistory);
         }
+
+        /* 新增的清除分數功能：保留原邏輯並新增一個按鈕事件 */
+        document.getElementById('clearScoresBtn').addEventListener('click', () => {
+            if (confirm('確定要清除所有分數嗎？\n此操作無法復原！')) {
+                localStorage.removeItem('scoresHistory');
+                alert('所有分數已被清除！');
+            }
+        });
     </script>
 </body>
 </html>
