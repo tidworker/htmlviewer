@@ -372,7 +372,7 @@
       }
 
       // 確認是否紀錄
-      if (confirm(`${resultText}\n「確定」將紀錄並跳轉到 score.html\n「取消」則不紀錄`)) {
+      if (confirm(`${resultText}\n「確定」將紀錄成績\n「取消」則不紀錄`)) {
         const scoresHistory = JSON.parse(localStorage.getItem('scoresHistory')) || [];
         scoresHistory.push({
           round: scoresHistory.length + 1,
