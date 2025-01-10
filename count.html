@@ -21,29 +21,25 @@
             font-size: 1.2em;
             text-align: center;
         }
-
-        /* === 修改：玩家按鈕直列顯示 === */
+        /* 玩家按鈕直列顯示 */
         .player-buttons {
             display: flex;
-            flex-direction: column; /* 由 row 改為 column */
+            flex-direction: column;
             align-items: center;
             margin: 20px 0;
         }
         .player-buttons button {
-            margin: 5px 0; /* 每個玩家按鈕之間一點間距 */
-            width: 200px;  /* 可自行調整按鈕寬度 */
-        }
-
-        button {
+            margin: 5px 0;
+            width: 200px;
             padding: 10px;
             font-size: 1.2em;
             color: white;
+            background-color: #707070;
             border: none;
             border-radius: 5px;
             cursor: pointer;
-            background-color: #707070;
         }
-        button:hover {
+        .player-buttons button:hover {
             opacity: 0.8;
         }
         .modal {
@@ -118,8 +114,8 @@
             border-radius: 15px;
         }
         .slider:before {
-            content: "";
             position: absolute;
+            content: "";
             height: 19px;
             width: 19px;
             left: 3px;
@@ -160,10 +156,8 @@
 <body>
     <h1>大老二計分</h1>
 
-    <!-- 主頁面規則顯示 -->
     <div class="rules" id="rulesDisplay">規則：讀取中...</div>
 
-    <!-- 玩家按鈕：直列顯示 -->
     <div class="player-buttons">
         <button id="player1Btn">玩家 1</button>
         <button id="player2Btn">玩家 2</button>
@@ -171,7 +165,6 @@
         <button id="player4Btn">玩家 4</button>
     </div>
 
-    <!-- 確認勝方模態窗 -->
     <div class="overlay" id="overlay"></div>
     <div class="modal" id="confirmWinnerModal">
         <p id="confirmWinnerText"></p>
@@ -179,7 +172,6 @@
         <button id="cancelWinnerBtn" class="action">取消</button>
     </div>
 
-    <!-- 子頁面模態窗 (玩家計分) -->
     <div class="modal" id="scoreModal">
         <h2 id="playerTitle"></h2>
         <label>張數 (1-13):</label>
@@ -204,9 +196,8 @@
     </div>
 
     <script>
-        /* 根據您先前的邏輯，不做刪減，只作小調整 */
-        const players      = JSON.parse(localStorage.getItem('players'));
-        const settings     = JSON.parse(localStorage.getItem('settings'));
+        const players       = JSON.parse(localStorage.getItem('players'));
+        const settings      = JSON.parse(localStorage.getItem('settings'));
         const scoresHistory = JSON.parse(localStorage.getItem('scoresHistory')) || [];
 
         if (!players || !settings) {
@@ -223,7 +214,6 @@
         }
         updateRulesDisplay();
 
-        // 設定玩家按鈕文字
         document.getElementById('player1Btn').innerText = players.player1 || '玩家 1';
         document.getElementById('player2Btn').innerText = players.player2 || '玩家 2';
         document.getElementById('player3Btn').innerText = players.player3 || '玩家 3';
@@ -247,24 +237,27 @@
             });
         });
 
-        // 確認或取消勝方
         document.getElementById('confirmWinnerBtn').addEventListener('click', () => {
             losers.length = 0;
             for (let i = 1; i <= 4; i++) {
-                if (i !== winner) losers.push(i);
+                if (i !== winner) {
+                    losers.push(i);
+                }
             }
             currentLoserIndex = 0;
+
             document.getElementById('confirmWinnerModal').style.display = 'none';
             document.getElementById('overlay').style.display = 'none';
+
             showModal(losers[currentLoserIndex]);
         });
+
         document.getElementById('cancelWinnerBtn').addEventListener('click', () => {
             document.getElementById('confirmWinnerModal').style.display = 'none';
             document.getElementById('overlay').style.display = 'none';
             winner = '';
         });
 
-        // 顯示計分 modal
         function showModal(playerIndex) {
             const modal = document.getElementById('scoreModal');
             document.getElementById('playerTitle').innerText =
@@ -281,13 +274,10 @@
             document.getElementById('overlay').style.display = 'none';
         }
 
-        // 設定 +- 按鈕
         document.querySelectorAll('.adjust').forEach(button => {
             button.addEventListener('click', e => {
                 const type = e.target.dataset.type;
-                const input = document.getElementById(
-                  type === 'cards' ? 'cardCount' : 'twoCount'
-                );
+                const input = document.getElementById(type === 'cards' ? 'cardCount' : 'twoCount');
                 let value = parseInt(input.value) || 0;
                 value += e.target.classList.contains('increase') ? 1 : -1;
                 const min = parseInt(input.getAttribute('min'));
@@ -297,11 +287,11 @@
             });
         });
 
-        // 及時計算分數
         function updateScore() {
-            const cardCount    = parseInt(document.getElementById('cardCount').value);
-            const twoCount     = parseInt(document.getElementById('twoCount').value);
+            const cardCount = parseInt(document.getElementById('cardCount').value);
+            const twoCount  = parseInt(document.getElementById('twoCount').value);
             const monsterBonus = document.getElementById('monsterBonusSwitch').checked ? 2 : 1;
+
             let score = cardCount * Math.pow(2, twoCount) * settings.multiplier;
 
             if (settings.rules.rule7 && cardCount >= 7) score *= 2;
@@ -309,14 +299,14 @@
             if (settings.rules.rule13 && cardCount >= 13) score *= 2;
 
             score *= monsterBonus;
+
             document.getElementById('scoreResult').innerText = `分數為：${-Math.abs(score)} 分`;
         }
 
-        // 玩家計完分後，是否繼續下位玩家
         document.getElementById('confirmScore').addEventListener('click', () => {
             const playerIndex = losers[currentLoserIndex];
-            const cardCount = parseInt(document.getElementById('cardCount').value);
-            const twoCount  = parseInt(document.getElementById('twoCount').value);
+            const cardCount   = parseInt(document.getElementById('cardCount').value);
+            const twoCount    = parseInt(document.getElementById('twoCount').value);
             const monsterBonus = document.getElementById('monsterBonusSwitch').checked ? 2 : 1;
 
             let score = cardCount * Math.pow(2, twoCount) * settings.multiplier;
@@ -326,43 +316,40 @@
             score *= monsterBonus;
 
             scores[`player${playerIndex}`] = -Math.abs(score);
+
             closeModal();
 
-            // 新增：完成計分後跳出確認視窗
-            if (!confirm(`已為「${players[`player${playerIndex}`]}」計分：${scores[`player${playerIndex}`]}分。\n確定進行下一位玩家嗎？\n按「取消」可回到本玩家重填分數。`)) {
-                // 若取消，就回到本玩家
+            // 完成本玩家計分後，再次詢問是否繼續下位玩家
+            if (!confirm(`已為「${players[`player${playerIndex}`]}」計分：${scores[`player${playerIndex}`]}分。\n按「確定」進行下一位玩家，\n「取消」可回到本玩家重填分數。`)) {
+                // 回到當前玩家
                 showModal(playerIndex);
                 return;
             }
 
-            // 繼續下一個玩家
+            // 下一位玩家
             currentLoserIndex++;
             if (currentLoserIndex < losers.length) {
                 showModal(losers[currentLoserIndex]);
             } else {
-                // 所有玩家計算完 -> 顯示全部成績，確認後存入 localStorage
+                // 所有玩家計算完成 -> 最終確認
                 finalConfirm();
             }
         });
 
-        // 所有玩家計算完 -> 最終確認要不要記錄
         function finalConfirm() {
-            // 計算總成績
             let totalNegative = 0;
             for (let i = 1; i <= 4; i++) {
                 if (i !== winner) totalNegative += scores[`player${i}`];
             }
             scores[`player${winner}`] = Math.abs(totalNegative);
 
-            // 顯示總成績
             let resultText = '最終分數：\n';
             for (let i = 1; i <= 4; i++) {
                 resultText += `${players[`player${i}`]}：${scores[`player${i}`]} 分\n`;
             }
 
-            // 確認視窗
-            if (confirm(`${resultText}\n是否確定記錄這筆成績？\n「取消」則不寫入`)) {
-                // 如果確定 -> 記錄到 localStorage
+            if (confirm(`${resultText}\n確定記錄本回合分數？\n按「取消」則不紀錄`)) {
+                // 確定 -> 寫入 localStorage
                 const roundResult = {
                     round: scoresHistory.length + 1,
                     scores: { ...scores },
@@ -370,9 +357,15 @@
                 };
                 scoresHistory.push(roundResult);
                 localStorage.setItem('scoresHistory', JSON.stringify(scoresHistory));
-                alert('本回合分數已記錄！');
+                alert('分數已記錄，將前往成績頁！');
+
+                // === 新增：計算完成 -> 轉到 score.html ===
+                // 若此頁不是在 iframe，可用 window.location.href
+                // 若在 big2test.html 之 iframe 中，需要 parent or top
+                // 依您檔案結構而定，這裡示範最簡單的：
+                window.location.href = 'score.html';
             } else {
-                // 不記錄 -> 清除本次計分 (不加到 scoresHistory)
+                // 不紀錄
                 alert('本回合分數未記錄。');
             }
         }
