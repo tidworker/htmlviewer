@@ -1,16 +1,15 @@
 <!DOCTYPE html>
 <html lang="zh-TW">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
     <title>設定遊戲規則</title>
     <style>
-        /* 與 count / score 頁面風格一致 */
         body {
             font-family: Arial, sans-serif;
             margin: 10px;
             line-height: 1.6;
-            background-color: #FFFFFF; /* 統一背景 */
+            background-color: #f9f9f9;
             color: #333;
         }
         h1 {
@@ -42,21 +41,20 @@
         input[type="checkbox"] {
             margin-right: 10px;
         }
-        /* 與 count / score 頁面的按鈕樣式一致 */
         button {
             display: block;
             width: 100%;
             padding: 12px;
             font-size: 1.2em;
             font-weight: bold;
-            background-color: #707070;
+            background-color: #4CAF50;
             color: white;
             border: none;
             border-radius: 5px;
             cursor: pointer;
         }
         button:hover {
-            opacity: 0.8; /* 與 count 頁面一致的 hover 效果 */
+            background-color: #45a049;
         }
         @media (max-width: 600px) {
             h1 {
@@ -73,32 +71,30 @@
     </style>
 </head>
 <body>
-
-<br>
-
+    <h1>設定遊戲規則</h1>
     <form id="settingsForm">
         <!-- 玩家名稱 -->
         <div class="form-group">
             <label for="player1">玩家 1 名稱</label>
-            <input type="text" id="player1" placeholder="輸入玩家 1 名稱" required>
+            <input type="text" id="player1" placeholder="輸入玩家 1 名稱" value="玩家 1" required>
         </div>
         <div class="form-group">
             <label for="player2">玩家 2 名稱</label>
-            <input type="text" id="player2" placeholder="輸入玩家 2 名稱" required>
+            <input type="text" id="player2" placeholder="輸入玩家 2 名稱" value="玩家 2" required>
         </div>
         <div class="form-group">
             <label for="player3">玩家 3 名稱</label>
-            <input type="text" id="player3" placeholder="輸入玩家 3 名稱" required>
+            <input type="text" id="player3" placeholder="輸入玩家 3 名稱" value="玩家 3" required>
         </div>
         <div class="form-group">
             <label for="player4">玩家 4 名稱</label>
-            <input type="text" id="player4" placeholder="輸入玩家 4 名稱" required>
+            <input type="text" id="player4" placeholder="輸入玩家 4 名稱" value="玩家 4" required>
         </div>
 
         <!-- 規則：倍率 -->
         <div class="form-group">
             <label for="multiplier">倍率</label>
-            <input type="number" id="multiplier" placeholder="輸入倍率" required>
+            <input type="number" id="multiplier" placeholder="輸入倍率" value="1" min="1" required>
         </div>
 
         <!-- 規則：勾選 -->
@@ -116,34 +112,39 @@
     </form>
 
     <script>
-        // 先讀取現有的 players / settings，若有資料，就帶入表單
-        const existingPlayers = JSON.parse(localStorage.getItem('players')) || {};
-        const existingSettings = JSON.parse(localStorage.getItem('settings')) || {};
+        // 預設值初始化
+        function initializeSettings() {
+            const players = JSON.parse(localStorage.getItem('players')) || {
+                player1: "玩家 1",
+                player2: "玩家 2",
+                player3: "玩家 3",
+                player4: "玩家 4"
+            };
+            const settings = JSON.parse(localStorage.getItem('settings')) || {
+                multiplier: 1,
+                rules: {
+                    rule7: false,
+                    rule10: false,
+                    rule13: false
+                }
+            };
 
-        // 如果已經有 players 資料，填入輸入欄
-        if (existingPlayers.player1) {
-            document.getElementById('player1').value = existingPlayers.player1;
-        }
-        if (existingPlayers.player2) {
-            document.getElementById('player2').value = existingPlayers.player2;
-        }
-        if (existingPlayers.player3) {
-            document.getElementById('player3').value = existingPlayers.player3;
-        }
-        if (existingPlayers.player4) {
-            document.getElementById('player4').value = existingPlayers.player4;
+            // 設定玩家名稱
+            document.getElementById('player1').value = players.player1 || "玩家 1";
+            document.getElementById('player2').value = players.player2 || "玩家 2";
+            document.getElementById('player3').value = players.player3 || "玩家 3";
+            document.getElementById('player4').value = players.player4 || "玩家 4";
+
+            // 設定倍率
+            document.getElementById('multiplier').value = settings.multiplier || 1;
+
+            // 設定規則勾選
+            document.getElementById('rule7').checked = settings.rules.rule7 || false;
+            document.getElementById('rule10').checked = settings.rules.rule10 || false;
+            document.getElementById('rule13').checked = settings.rules.rule13 || false;
         }
 
-        // 如果有 settings 資料，填入倍率與規則
-        if (existingSettings.multiplier) {
-            document.getElementById('multiplier').value = existingSettings.multiplier;
-        }
-        if (existingSettings.rules) {
-            document.getElementById('rule7').checked  = !!existingSettings.rules.rule7;
-            document.getElementById('rule10').checked = !!existingSettings.rules.rule10;
-            document.getElementById('rule13').checked = !!existingSettings.rules.rule13;
-        }
-
+        // 儲存設定
         document.getElementById('saveButton').addEventListener('click', function() {
             // 收集玩家名稱
             const players = {
@@ -167,8 +168,11 @@
             localStorage.setItem('players', JSON.stringify(players));
             localStorage.setItem('settings', JSON.stringify(settings));
 
-            alert('設定已儲存！\n玩家與規則資料均已更新。');
+            alert('設定已儲存！');
         });
+
+        // 初始化預設值
+        initializeSettings();
     </script>
 </body>
 </html>
