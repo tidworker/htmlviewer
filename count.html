@@ -1,8 +1,8 @@
 <!DOCTYPE html>
 <html lang="zh-TW">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>大老二計分</title>
   <style>
     body {
@@ -21,10 +21,9 @@
       font-size: 1.2em;
       text-align: center;
     }
-    /* 玩家按鈕：直列顯示 */
     .player-buttons {
       display: flex;
-      flex-direction: column;
+      flex-direction: column; /* 直列顯示 */
       align-items: center;
       margin: 20px 0;
     }
@@ -149,19 +148,16 @@
   </style>
 </head>
 <body>
-  <br>
+  <h1>大老二計分</h1>
 
-  <!-- 主頁面規則顯示 -->
   <div class="rules" id="rulesDisplay">規則：讀取中...</div>
 
   <div class="player-buttons">
-      <button id="player1Btn">玩家 1</button>
-      <button id="player2Btn">玩家 2</button>
-      <button id="player3Btn">玩家 3</button>
-      <button id="player4Btn">玩家 4</button>
+      <button id="player1Btn">玩家1</button>
+      <button id="player2Btn">玩家2</button>
+      <button id="player3Btn">玩家3</button>
+      <button id="player4Btn">玩家4</button>
   </div>
-
-<h1>點選贏家開始計分</h1>
 
   <div class="overlay" id="overlay"></div>
   <div class="modal" id="confirmWinnerModal">
@@ -194,16 +190,13 @@
   </div>
 
   <script>
-    // 1) 忽略 localStorage，直接強制預設規則 / 玩家名稱
-    //   倍率=1, 不勾選任何 rule7/rule10/rule13
-    //   四位玩家名稱= 玩家1,2,3,4
+    // 預設規則 & 玩家名稱
     const players = {
       player1: "玩家1",
       player2: "玩家2",
       player3: "玩家3",
       player4: "玩家4"
     };
-
     const settings = {
       multiplier: 1,
       rules: {
@@ -213,42 +206,23 @@
       }
     };
 
-    // 2) 規則顯示
+    // 規則顯示: 若無任何勾選, Double => 無
     function updateRulesDisplay() {
-    // 假設 settings 裡有 multiplier，以及 rules: { rule7, rule10, rule13 }
-    const { multiplier, rules } = settings;
-
-    let doubleText = '';
-    if (rules.rule7 || rules.rule10 || rules.rule13) {
-        // 若有勾選至少一項，逐項拼接
-        if (rules.rule7)  doubleText += '7張, ';
-        if (rules.rule10) doubleText += '10張, ';
-        if (rules.rule13) doubleText += '13張, ';
-        // 去除最後多餘的 ", "
+      const { rule7, rule10, rule13 } = settings.rules;
+      let doubleText = '';
+      if (rule7 || rule10 || rule13) {
+        if (rule7) doubleText += '7張, ';
+        if (rule10) doubleText += '10張, ';
+        if (rule13) doubleText += '13張, ';
         doubleText = doubleText.replace(/,\s*$/, '');
-    } else {
-        // 全部沒勾選 => 顯示「無」
+      } else {
         doubleText = '無';
+      }
+      const text = `規則：倍率 ${settings.multiplier} | Double ${doubleText}`;
+      document.getElementById('rulesDisplay').innerText = text;
     }
-
-    // 倍率(若沒給值則設1)
-    const multi = multiplier || 1;
-
-    // 組合顯示字串
-    const rulesText = `規則：倍率 ${multi} | Double ${doubleText}`;
-
-    // 將文字塞回頁面
-    document.getElementById('rulesDisplay').innerText = rulesText;
-}
     updateRulesDisplay();
 
-    // 3) 更新玩家按鈕文字
-    document.getElementById('player1Btn').innerText = players.player1;
-    document.getElementById('player2Btn').innerText = players.player2;
-    document.getElementById('player3Btn').innerText = players.player3;
-    document.getElementById('player4Btn').innerText = players.player4;
-
-    // 4) 選擇勝方 -> losers
     let winner = '';
     let currentLoserIndex = 0;
     const losers = [];
@@ -259,7 +233,7 @@
       player4: 0
     };
 
-    // 5) 各玩家按鈕
+    // 綁定玩家按鈕
     document.querySelectorAll('.player-buttons button').forEach((btn, index) => {
       btn.addEventListener('click', () => {
         winner = index + 1;
@@ -277,7 +251,7 @@
       }
       currentLoserIndex = 0;
 
-      // => 每次選完贏家後 怪物加成預設關閉
+      // 每次選完贏家後 => 怪物加成預設關閉
       document.getElementById('monsterBonusSwitch').checked = false;
 
       document.getElementById('confirmWinnerModal').style.display = 'none';
@@ -292,9 +266,9 @@
       winner = '';
     });
 
-    // 6) 顯示計分 modal
     function showModal(playerIndex) {
-      document.getElementById('playerTitle').innerText = `玩家 ${players[`player${playerIndex}`]}`;
+      document.getElementById('playerTitle').innerText =
+        `玩家 ${players[`player${playerIndex}`]}`;
       document.getElementById('cardCount').value = 1;
       document.getElementById('twoCount').value = 0;
       updateScore();
@@ -307,7 +281,6 @@
       document.getElementById('overlay').style.display = 'none';
     }
 
-    // 7) 張數 +-
     document.querySelectorAll('.adjust').forEach(button => {
       button.addEventListener('click', e => {
         const type = e.target.dataset.type;
@@ -321,10 +294,9 @@
       });
     });
 
-    // 8) 即時計算分數
     function updateScore() {
-      const cardCount = parseInt(document.getElementById('cardCount').value);
-      const twoCount  = parseInt(document.getElementById('twoCount').value);
+      const cardCount    = parseInt(document.getElementById('cardCount').value);
+      const twoCount     = parseInt(document.getElementById('twoCount').value);
       const monsterBonus = document.getElementById('monsterBonusSwitch').checked ? 2 : 1;
 
       let score = cardCount * Math.pow(2, twoCount) * settings.multiplier;
@@ -336,7 +308,6 @@
       document.getElementById('scoreResult').innerText = `分數為：${-Math.abs(score)} 分`;
     }
 
-    // 9) 完成計分
     document.getElementById('confirmScore').addEventListener('click', () => {
       const playerIndex = losers[currentLoserIndex];
       const cardCount   = parseInt(document.getElementById('cardCount').value);
@@ -353,24 +324,21 @@
 
       closeModal();
 
-      // 是否繼續下位玩家
+      // 完成本玩家後 -> 問是否要繼續
       if (!confirm(`已為「${players[`player${playerIndex}`]}」計分：${scores[`player${playerIndex}`]}分。\n「確定」進行下一位玩家，\n「取消」可回到本玩家重填分數。`)) {
-        // 回到此玩家
         showModal(playerIndex);
         return;
       }
 
-      // 繼續下一個玩家
+      // 下一玩家
       currentLoserIndex++;
       if (currentLoserIndex < losers.length) {
         showModal(losers[currentLoserIndex]);
       } else {
-        // 所有玩家計完 -> finalConfirm
         finalConfirm();
       }
     });
 
-    // 10) 所有玩家計完 -> 最終確認 -> 直接跳轉score
     function finalConfirm() {
       let totalNegative = 0;
       for (let i = 1; i <= 4; i++) {
@@ -383,9 +351,7 @@
         resultText += `${players[`player${i}`]}：${scores[`player${i}`]} 分\n`;
       }
 
-      // 問使用者是否記錄
-      if (confirm(`${resultText}\n「確定」將紀錄並跳轉到score頁面，\n「取消」則不紀錄`)) {
-        // 寫入 localStorage
+      if (confirm(`${resultText}\n「確定」將紀錄並跳轉到 score.html\n「取消」則不紀錄`)) {
         const scoresHistory = JSON.parse(localStorage.getItem('scoresHistory')) || [];
         scoresHistory.push({
           round: scoresHistory.length + 1,
@@ -394,7 +360,7 @@
         });
         localStorage.setItem('scoresHistory', JSON.stringify(scoresHistory));
 
-        // 不顯示「分數已記錄前往成績頁」，直接跳轉
+        // 直接跳轉
         window.location.href = 'score.html';
       } else {
         alert('本回合分數未記錄。');
