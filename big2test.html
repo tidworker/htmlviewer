@@ -42,12 +42,25 @@
             box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
             border-radius: 5px;
         }
+
+        /* 統計資訊區域 */
+        .stats-container {
+            margin: 20px 0;
+            text-align: center;
+            font-size: 1.2em;
+        }
+        .stats-container .stat-item {
+            margin: 5px 0;
+        }
+        .stats-container .highlight {
+            color: red;
+            font-weight: bold;
+        }
     </style>
 </head>
 <body>
     <h1>大老二 測試頁面</h1>
 
-    <!-- 切換三個頁面的按鈕區 -->
     <div class="switch-buttons">
         <button id="btnSetting">Setting 頁</button>
         <button id="btnCount">Count 頁</button>
@@ -57,29 +70,87 @@
     <!-- 內嵌頁面 (iframe) -->
     <iframe id="testFrame" src="setting.html"></iframe>
 
+    <!-- 新增: 統計資訊區域 -->
+    <div class="stats-container">
+        <div class="stat-item">當前總分：<span id="totalScore" class="highlight">0</span></div>
+        <div class="stat-item">勝場數：<span id="winCount" class="highlight">0</span></div>
+        <div class="stat-item">勝率：<span id="winRate" class="highlight">0%</span></div>
+        <!-- 可依需求再加入更多統計 -->
+    </div>
+
     <script>
-        // 取得按鈕
+        // 保留原有 iframe 切換邏輯
         const btnSetting = document.getElementById('btnSetting');
         const btnCount = document.getElementById('btnCount');
         const btnScore = document.getElementById('btnScore');
-
-        // 取得 iframe
         const testFrame = document.getElementById('testFrame');
 
-        // 點擊切換到 setting.html
         btnSetting.addEventListener('click', () => {
             testFrame.src = 'setting.html';
         });
-
-        // 點擊切換到 count.html
         btnCount.addEventListener('click', () => {
             testFrame.src = 'count.html';
         });
-
-        // 點擊切換到 score.html
         btnScore.addEventListener('click', () => {
             testFrame.src = 'score.html';
         });
+
+        // 統計資訊顯示
+        const totalScoreElem = document.getElementById('totalScore');
+        const winCountElem   = document.getElementById('winCount');
+        const winRateElem    = document.getElementById('winRate');
+
+        // 計算「當前總分」「勝場數」「勝率」
+        function calcStats() {
+            const scoresHistory = JSON.parse(localStorage.getItem('scoresHistory')) || [];
+
+            if (!scoresHistory.length) {
+                // 若沒有任何歷史資料，所有統計顯示 0
+                totalScoreElem.textContent = '0';
+                winCountElem.textContent   = '0';
+                winRateElem.textContent    = '0%';
+                return;
+            }
+
+            // 總分、總局數、勝局數
+            let totalScore = 0;
+            let totalGames = scoresHistory.length; 
+            let winCount = 0;
+
+            // 假設: 如果要判斷「勝場數」與「勝率」，需要知道「當前使用者是誰」，
+            //      或者只是隨意以 "player1" 為判斷主體？ 
+            //      這裡假設 player1 就是操作者，故我們以 player1 > 0 為勝場判斷
+            //      (實際邏輯可依需求更改)
+            // 
+            // 當您需要真正的「勝方」概念時，可能需要scoresHistory存 winner= "player1" or "player2"...
+            // 這裡僅示範「當前總分 = player1 的分數總和」、「勝場 = player1 分數>0 的場次」等邏輯
+
+            scoresHistory.forEach(round => {
+                const p1Score = round.scores?.player1 || 0;
+                // 累加 p1Score 到 totalScore
+                totalScore += p1Score;
+
+                // 如果 p1Score > 0，就算一場勝利
+                if (p1Score > 0) {
+                    winCount++;
+                }
+            });
+
+            // 計算勝率 (以 player1 的分數>0 視為勝利場次)
+            const winRate = totalGames === 0 
+                ? 0 
+                : Math.round((winCount / totalGames) * 100);
+
+            totalScoreElem.textContent = totalScore;
+            winCountElem.textContent   = winCount;
+            winRateElem.textContent    = winRate + '%';
+        }
+
+        // 初始化載入頁面後立即顯示當前統計
+        calcStats();
+
+        // 若需要在某些事件(例如User操作完)後重新計算，可再呼叫 calcStats()
+        // 目前就初始化時呼叫一次
     </script>
 </body>
 </html>
