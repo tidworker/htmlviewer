@@ -3,23 +3,25 @@
 <head>
   <meta charset="UTF-8">
   <title>麻將計分系統 - 底 + 台倍率 + 莊家連莊</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <style>
     body {
       font-family: Arial, sans-serif;
-      margin: 20px;
+      margin: 10px;
       background-color: #f5f5f5;
     }
     h1, h2 {
       text-align: center;
       color: #333;
+      font-size: 1.5em;
     }
     #baseSetting, #playerSelection, #scoringSection, #resultSection, #historySection, #scoreboardSection {
       background-color: #fff;
-      padding: 20px;
-      margin: 20px auto;
+      padding: 15px;
+      margin: 10px auto;
       border: 1px solid #ccc;
       border-radius: 8px;
-      max-width: 600px;
+      max-width: 100%;
       box-shadow: 0 2px 5px rgba(0,0,0,0.1);
     }
     /* Remove box-shadow from scoreboardSection */
@@ -27,15 +29,16 @@
       box-shadow: none;
     }
     button {
-      margin: 5px;
-      padding: 10px 20px;
-      font-size: 16px;
+      margin: 5px 2px;
+      padding: 10px;
+      font-size: 1em;
       cursor: pointer;
       border: none;
       border-radius: 5px;
       background-color: #4CAF50;
       color: white;
       transition: background-color 0.3s;
+      flex: 1 1 40%;
     }
     button:hover {
       background-color: #45a049;
@@ -50,7 +53,7 @@
       margin-top: 10px;
     }
     .button-group button {
-      flex: 1 1 45%;
+      flex: 1 1 40%;
       margin: 5px;
       background-color: #008CBA;
       color: white;
@@ -66,9 +69,10 @@
     }
     label {
       display: block;
-      margin: 10px 0;
+      margin: 10px 0 5px;
       font-weight: bold;
       color: #555;
+      font-size: 1em;
     }
     input[type="number"] {
       width: 100%;
@@ -77,6 +81,7 @@
       box-sizing: border-box;
       border: 1px solid #ccc;
       border-radius: 4px;
+      font-size: 1em;
     }
     .tai-number-container {
       display: flex;
@@ -87,6 +92,8 @@
       width: 40px;
       background-color: #555;
       color: white;
+      font-size: 1em;
+      padding: 8px 0;
     }
     .tai-number-container button:hover {
       background-color: #333;
@@ -95,10 +102,11 @@
       flex: 1;
       text-align: center;
       margin: 0 10px;
+      font-size: 1em;
     }
     .score-display {
       text-align: center;
-      font-size: 18px;
+      font-size: 1.2em;
       margin: 10px 0;
     }
     .selected {
@@ -131,6 +139,7 @@
       padding: 10px;
       border-radius: 5px;
       background-color: #fafafa;
+      font-size: 0.9em;
     }
     #historyList ul, #scoreboard table {
       width: 100%;
@@ -139,7 +148,7 @@
     #historyList li {
       padding: 5px 0;
       border-bottom: 1px solid #eee;
-      font-size: 14px;
+      font-size: 0.9em;
     }
     #historyList li:last-child {
       border-bottom: none;
@@ -148,9 +157,31 @@
       border: 1px solid #ddd;
       text-align: center;
       padding: 8px;
+      font-size: 0.9em;
     }
     #scoreboard th {
       background-color: #f2f2f2;
+    }
+
+    /* Responsive Design */
+    @media (max-width: 600px) {
+      .button-group {
+        flex-direction: column;
+        align-items: center;
+      }
+      button {
+        flex: 1 1 80%;
+      }
+      .tai-number-container {
+        flex-direction: column;
+      }
+      .tai-number-container button, .tai-number-container input[type="number"] {
+        width: 80%;
+        margin: 5px 0;
+      }
+      #historyList, #scoreboard {
+        max-height: 150px;
+      }
     }
   </style>
 </head>
@@ -455,7 +486,7 @@
       let record = `回合 ${history.length + 1}: `;
       let scoreChanges = [];
       for (let i = 0; i < 4; i++) {
-        let change = scores[i];
+        let change = "";
         if (huType === "chiHu") {
           if (i === winner) {
             change = `+${singleWinScore}`;
@@ -558,7 +589,9 @@
       const inputs = document.querySelectorAll('input[type="number"]');
       inputs.forEach(input => {
         input.addEventListener('focus', function() {
-          this.value = '';
+          if (!this.classList.contains('readonly')) {
+            this.value = '';
+          }
         });
       });
     }
