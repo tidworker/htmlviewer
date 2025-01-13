@@ -1,0 +1,569 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8">
+  <title>麻將計分系統 - 底 + 台倍率 + 莊家連莊</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 20px;
+      background-color: #f5f5f5;
+    }
+    h1, h2 {
+      text-align: center;
+      color: #333;
+    }
+    #baseSetting, #playerSelection, #scoringSection, #resultSection, #historySection, #scoreboardSection {
+      background-color: #fff;
+      padding: 20px;
+      margin: 20px auto;
+      border: 1px solid #ccc;
+      border-radius: 8px;
+      max-width: 600px;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    }
+    /* Remove box-shadow from scoreboardSection */
+    #scoreboardSection {
+      box-shadow: none;
+    }
+    button {
+      margin: 5px;
+      padding: 10px 20px;
+      font-size: 16px;
+      cursor: pointer;
+      border: none;
+      border-radius: 5px;
+      background-color: #4CAF50;
+      color: white;
+      transition: background-color 0.3s;
+    }
+    button:hover {
+      background-color: #45a049;
+    }
+    .hidden {
+      display: none;
+    }
+    .button-group {
+      display: flex;
+      justify-content: space-around;
+      flex-wrap: wrap;
+      margin-top: 10px;
+    }
+    .button-group button {
+      flex: 1 1 45%;
+      margin: 5px;
+      background-color: #008CBA;
+      color: white;
+    }
+    .button-group button:hover {
+      background-color: #007bb5;
+    }
+    .action-button {
+      background-color: #f44336;
+    }
+    .action-button:hover {
+      background-color: #da190b;
+    }
+    label {
+      display: block;
+      margin: 10px 0;
+      font-weight: bold;
+      color: #555;
+    }
+    input[type="number"] {
+      width: 100%;
+      padding: 8px;
+      margin-top: 5px;
+      box-sizing: border-box;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+    }
+    .tai-number-container {
+      display: flex;
+      align-items: center;
+      margin-top: 10px;
+    }
+    .tai-number-container button {
+      width: 40px;
+      background-color: #555;
+      color: white;
+    }
+    .tai-number-container button:hover {
+      background-color: #333;
+    }
+    .tai-number-container input[type="number"] {
+      flex: 1;
+      text-align: center;
+      margin: 0 10px;
+    }
+    .score-display {
+      text-align: center;
+      font-size: 18px;
+      margin: 10px 0;
+    }
+    .selected {
+      background-color: #FF5722 !important;
+      color: white;
+    }
+    .reset-button {
+      background-color: #f44336;
+    }
+    .reset-button:hover {
+      background-color: #da190b;
+    }
+    .disabled {
+      background-color: #ccc !important;
+      cursor: not-allowed;
+    }
+    .winner-disabled {
+      background-color: #e0e0e0 !important;
+      color: #555;
+      cursor: not-allowed;
+    }
+    .readonly {
+      background-color: #f0f0f0;
+      cursor: not-allowed;
+    }
+    #historyList, #scoreboard {
+      max-height: 200px;
+      overflow-y: auto;
+      border: 1px solid #ccc;
+      padding: 10px;
+      border-radius: 5px;
+      background-color: #fafafa;
+    }
+    #historyList ul, #scoreboard table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+    #historyList li {
+      padding: 5px 0;
+      border-bottom: 1px solid #eee;
+      font-size: 14px;
+    }
+    #historyList li:last-child {
+      border-bottom: none;
+    }
+    #scoreboard table, #scoreboard th, #scoreboard td {
+      border: 1px solid #ddd;
+      text-align: center;
+      padding: 8px;
+    }
+    #scoreboard th {
+      background-color: #f2f2f2;
+    }
+  </style>
+</head>
+<body>
+  <h1>麻將計分系統</h1>
+
+  <!-- 基本設定 -->
+  <div id="baseSetting">
+    <h2>基本設定</h2>
+    <label>
+      底：
+      <input type="number" id="baseScoreInput" value="100" min="0">
+    </label>
+    <label>
+      台的倍率：
+      <input type="number" id="taiMultiplierInput" value="20" min="0">
+    </label>
+  </div>
+
+  <!-- 選擇勝方 -->
+  <div id="playerSelection">
+    <h2>選擇勝方</h2>
+    <div class="score-display">
+      目前莊家：<span id="dealerLabel">玩家1</span>  
+      （連莊次數：<span id="dealerStreakLabel">0</span>）
+    </div>
+    <div class="button-group">
+      <button onclick="selectWinner(0)">玩家1</button>
+      <button onclick="selectWinner(1)">玩家2</button>
+      <button onclick="selectWinner(2)">玩家3</button>
+      <button onclick="selectWinner(3)">玩家4</button>
+    </div>
+  </div>
+
+  <!-- 計分設定區塊 -->
+  <div id="scoringSection" class="hidden">
+    <h2>計分</h2>
+    <div class="score-display">
+      本局贏家：<span id="winnerName">玩家1</span>
+    </div>
+
+    <!-- 選擇胡牌類型 -->
+    <label>選擇胡牌類型：</label>
+    <div class="button-group">
+      <button onclick="selectHuType('chiHu')" id="chiHuButton">吃胡</button>
+      <button onclick="selectHuType('ziMo')" id="ziMoButton">自摸</button>
+    </div>
+
+    <!-- 選擇放槍玩家 -->
+    <div id="chiHuOptions" class="hidden">
+      <label>選擇放槍玩家：</label>
+      <div class="button-group">
+        <button onclick="selectPaoPlayer(0)" id="paoPlayer0">玩家1</button>
+        <button onclick="selectPaoPlayer(1)" id="paoPlayer1">玩家2</button>
+        <button onclick="selectPaoPlayer(2)" id="paoPlayer2">玩家3</button>
+        <button onclick="selectPaoPlayer(3)" id="paoPlayer3">玩家4</button>
+      </div>
+    </div>
+
+    <!-- 台數顯示 -->
+    <label>
+      台數：
+    </label>
+    <div class="tai-number-container">
+      <button onclick="changeTaiNumber(-1)">-</button>
+      <input type="number" id="taiNumber" value="0" min="0" readonly class="readonly">
+      <button onclick="changeTaiNumber(1)">+</button>
+    </div>
+
+    <button onclick="calculateScore()">確認得失分</button>
+  </div>
+
+  <!-- 顯示計算結果 -->
+  <div id="resultSection" class="hidden">
+    <h2>當前分數</h2>
+    <div class="score-display">
+      玩家1：<span id="score0">0</span> 分<br>
+      玩家2：<span id="score1">0</span> 分<br>
+      玩家3：<span id="score2">0</span> 分<br>
+      玩家4：<span id="score3">0</span> 分
+    </div>
+    <div class="button-group">
+      <button onclick="resetSelection()">重新選擇勝方</button>
+      <button class="reset-button" onclick="resetGame()">重置遊戲</button>
+    </div>
+  </div>
+
+  <!-- 成績記錄 -->
+  <div id="historySection">
+    <h2>成績記錄</h2>
+    <div id="historyList">
+      <ul id="historyUl">
+        <!-- 成績記錄項目將在此處顯示 -->
+      </ul>
+    </div>
+  </div>
+
+  <!-- 總分表 -->
+  <div id="scoreboardSection">
+    <h2>總分表</h2>
+    <div id="scoreboard">
+      <table>
+        <thead>
+          <tr>
+            <th>玩家</th>
+            <th>總分</th>
+            <th>勝場數</th>
+            <th>勝率</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>玩家1</td>
+            <td id="totalScore0">0</td>
+            <td id="winCount0">0</td>
+            <td id="winRate0">0%</td>
+          </tr>
+          <tr>
+            <td>玩家2</td>
+            <td id="totalScore1">0</td>
+            <td id="winCount1">0</td>
+            <td id="winRate1">0%</td>
+          </tr>
+          <tr>
+            <td>玩家3</td>
+            <td id="totalScore2">0</td>
+            <td id="winCount2">0</td>
+            <td id="winRate2">0%</td>
+          </tr>
+          <tr>
+            <td>玩家4</td>
+            <td id="totalScore3">0</td>
+            <td id="winCount3">0</td>
+            <td id="winRate3">0%</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <script>
+    let scores = [0, 0, 0, 0];
+    let dealer = 0;
+    let dealerStreak = 0;
+    let winner = null;
+    let huType = null;
+    let paoPlayer = null;
+    let ziMoAddedTai = false;
+    let history = [];
+    let winCounts = [0, 0, 0, 0];
+    let totalRounds = 0;
+
+    updateDealerInfo();
+    updateScoreboard();
+
+    function getDealerBonus(streak) {
+      return (streak * 2) + 1;
+    }
+
+    function updateDealerInfo() {
+      document.getElementById("dealerLabel").innerText = "玩家" + (dealer + 1);
+      document.getElementById("dealerStreakLabel").innerText = dealerStreak;
+    }
+
+    function selectWinner(playerIndex) {
+      winner = playerIndex;
+      document.getElementById("winnerName").innerText = "玩家" + (winner + 1);
+
+      document.getElementById("playerSelection").classList.add("hidden");
+      document.getElementById("scoringSection").classList.remove("hidden");
+      document.getElementById("resultSection").classList.add("hidden");
+
+      huType = null;
+      paoPlayer = null;
+      document.getElementById("chiHuOptions").classList.add("hidden");
+      document.getElementById("taiNumber").value = 0;
+
+      clearPaoPlayerSelection();
+      clearHuTypeSelection();
+      ziMoAddedTai = false;
+
+      disableWinnerPaoButton();
+    }
+
+    function disableWinnerPaoButton() {
+      const winnerButton = document.getElementById("paoPlayer" + winner);
+      if (winnerButton) {
+        winnerButton.classList.add("winner-disabled");
+        winnerButton.disabled = true;
+      }
+    }
+
+    function selectHuType(type) {
+      huType = type;
+      if (huType === "chiHu") {
+        document.getElementById("chiHuOptions").classList.remove("hidden");
+      } else {
+        document.getElementById("chiHuOptions").classList.add("hidden");
+        if (!ziMoAddedTai) {
+          ziMoAddedTai = true;
+        }
+      }
+      highlightSelectedHuType(type);
+    }
+
+    function highlightSelectedHuType(type) {
+      clearHuTypeSelection();
+      const button = document.getElementById(type + "Button");
+      button.classList.add("selected");
+    }
+
+    function clearHuTypeSelection() {
+      const huTypes = ["chiHu", "ziMo"];
+      huTypes.forEach(type => {
+        const button = document.getElementById(type + "Button");
+        button.classList.remove("selected");
+      });
+    }
+
+    function selectPaoPlayer(playerIndex) {
+      if (playerIndex === winner) {
+        alert("放槍玩家不能是贏家！");
+        return;
+      }
+      paoPlayer = playerIndex;
+      highlightSelectedPaoPlayer(playerIndex);
+    }
+
+    function highlightSelectedPaoPlayer(playerIndex) {
+      clearPaoPlayerSelection();
+      const button = document.getElementById("paoPlayer" + playerIndex);
+      button.classList.add("selected");
+      button.disabled = true;
+    }
+
+    function clearPaoPlayerSelection() {
+      for (let i = 0; i < 4; i++) {
+        const button = document.getElementById("paoPlayer" + i);
+        button.classList.remove("selected");
+        if (i !== winner) {
+          button.disabled = false;
+          button.classList.remove("disabled");
+          button.classList.remove("winner-disabled");
+        }
+      }
+    }
+
+    function changeTaiNumber(delta) {
+      const taiInput = document.getElementById("taiNumber");
+      let currentTai = parseInt(taiInput.value) || 0;
+      currentTai += delta;
+      if (currentTai < 0) currentTai = 0;
+      taiInput.value = currentTai;
+    }
+
+    function calculateScore() {
+      if (!huType) {
+        alert("請先選擇 吃胡 或 自摸");
+        return;
+      }
+
+      if (huType === "chiHu" && paoPlayer === null) {
+        alert("請選擇放槍玩家");
+        return;
+      }
+
+      const baseScore = parseInt(document.getElementById("baseScoreInput").value) || 0;
+      const taiMultiplier = parseInt(document.getElementById("taiMultiplierInput").value) || 0;
+      const taiInput = parseInt(document.getElementById("taiNumber").value) || 0;
+      let taiUsed = taiInput;
+
+      if (huType === "ziMo") {
+        taiUsed += 1;
+      }
+
+      const dealerBonus = getDealerBonus(dealerStreak);
+      let singleWinScore = baseScore + (taiMultiplier * taiUsed);
+
+      if (winner === dealer) {
+        singleWinScore += (taiMultiplier * dealerBonus);
+        dealerStreak++;
+      } else {
+        const dealerPenalty = taiMultiplier * dealerBonus;
+        scores[dealer] -= dealerPenalty;
+        dealer = (dealer + 1) % 4;
+        dealerStreak = 0;
+      }
+
+      if (huType === "chiHu") {
+        scores[winner] += singleWinScore;
+        scores[paoPlayer] -= singleWinScore;
+      } else if (huType === "ziMo") {
+        scores[winner] += singleWinScore * 3;
+        for (let i = 0; i < 4; i++) {
+          if (i !== winner) {
+            scores[i] -= singleWinScore;
+          }
+        }
+      }
+
+      // 記錄成績（僅記錄分數變動）
+      let record = `回合 ${history.length + 1}: `;
+      let scoreChanges = [];
+      for (let i = 0; i < 4; i++) {
+        let change = scores[i];
+        if (huType === "chiHu") {
+          if (i === winner) {
+            change = `+${singleWinScore}`;
+          } else if (i === paoPlayer) {
+            change = `-${singleWinScore}`;
+          } else {
+            change = `0`;
+          }
+        } else if (huType === "ziMo") {
+          if (i === winner) {
+            change = `+${singleWinScore * 3}`;
+          } else {
+            change = `-${singleWinScore}`;
+          }
+        }
+        scoreChanges.push(`玩家${i + 1} ${change}`);
+      }
+      record += scoreChanges.join(", ");
+      history.push(record);
+      updateHistory();
+
+      // 更新總分表
+      winCounts[winner]++;
+      totalRounds++;
+      updateScoreboard();
+
+      // 更新分數顯示
+      document.getElementById("score0").innerText = scores[0];
+      document.getElementById("score1").innerText = scores[1];
+      document.getElementById("score2").innerText = scores[2];
+      document.getElementById("score3").innerText = scores[3];
+
+      // 顯示結果
+      document.getElementById("scoringSection").classList.add("hidden");
+      document.getElementById("resultSection").classList.remove("hidden");
+    }
+
+    function updateHistory() {
+      const historyUl = document.getElementById("historyUl");
+      historyUl.innerHTML = "";
+      for (let i = history.length - 1; i >= 0; i--) {
+        const li = document.createElement("li");
+        li.innerText = history[i];
+        historyUl.appendChild(li);
+      }
+    }
+
+    function updateScoreboard() {
+      for (let i = 0; i < 4; i++) {
+        document.getElementById(`totalScore${i}`).innerText = scores[i];
+        document.getElementById(`winCount${i}`).innerText = winCounts[i];
+        let rate = totalRounds > 0 ? ((winCounts[i] / totalRounds) * 100).toFixed(2) : 0;
+        document.getElementById(`winRate${i}`).innerText = `${rate}%`;
+      }
+    }
+
+    function resetSelection() {
+      updateDealerInfo();
+      document.getElementById("playerSelection").classList.remove("hidden");
+      document.getElementById("scoringSection").classList.add("hidden");
+      document.getElementById("resultSection").classList.add("hidden");
+      clearPaoPlayerSelection();
+      clearHuTypeSelection();
+      ziMoAddedTai = false;
+    }
+
+    function resetGame() {
+      if (confirm("確定要重置遊戲嗎？所有分數和記錄將被清除。")) {
+        scores = [0, 0, 0, 0];
+        dealer = 0;
+        dealerStreak = 0;
+        winner = null;
+        huType = null;
+        paoPlayer = null;
+        ziMoAddedTai = false;
+        history = [];
+        winCounts = [0, 0, 0, 0];
+        totalRounds = 0;
+
+        document.getElementById("score0").innerText = scores[0];
+        document.getElementById("score1").innerText = scores[1];
+        document.getElementById("score2").innerText = scores[2];
+        document.getElementById("score3").innerText = scores[3];
+        updateDealerInfo();
+        document.getElementById("playerSelection").classList.remove("hidden");
+        document.getElementById("scoringSection").classList.add("hidden");
+        document.getElementById("resultSection").classList.add("hidden");
+        clearPaoPlayerSelection();
+        clearHuTypeSelection();
+        updateHistory();
+        updateScoreboard();
+
+        document.getElementById("baseScoreInput").value = 100;
+        document.getElementById("taiMultiplierInput").value = 20;
+        document.getElementById("taiNumber").value = 0;
+      }
+    }
+
+    function setupInputClear() {
+      const inputs = document.querySelectorAll('input[type="number"]');
+      inputs.forEach(input => {
+        input.addEventListener('focus', function() {
+          this.value = '';
+        });
+      });
+    }
+
+    setupInputClear();
+  </script>
+</body>
+</html>
