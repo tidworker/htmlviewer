@@ -37,7 +37,7 @@
       border-radius: 5px;
       background-color: #555555; /* Dark Grey */
       color: white;
-      transition: background-color 0.3s;
+      transition: background-color 0.3s, opacity 0.3s;
       flex: 1 1 45%; /* Adjusted for better layout */
       min-width: 100px; /* Increased min-width for longer labels */
     }
@@ -53,6 +53,12 @@
       flex-wrap: wrap;
       margin-top: 10px;
     }
+    /* 左右配置按鈕組 */
+    .scoring-buttons {
+      display: flex;
+      justify-content: space-between;
+      width: 100%;
+    }
     .player-button {
       display: flex;
       align-items: center;
@@ -66,7 +72,7 @@
       color: white;
       border: none;
       border-radius: 5px;
-      transition: background-color 0.3s;
+      transition: background-color 0.3s, opacity 0.3s;
       font-size: 1em;
       min-width: 100px; /* Increased min-width */
     }
@@ -131,9 +137,19 @@
       font-size: 1.2em;
       margin: 10px 0;
     }
-    .selected {
-      background-color: #777777 !important; /* Medium Grey */
-      color: white;
+    .winner-selected {
+      background-color: #d3d3d3 !important; /* Light Grey */
+      color: white !important;
+      opacity: 0.8;
+      cursor: not-allowed;
+      pointer-events: none; /* Prevent any click */
+    }
+    .loser-selected {
+      background-color: #ff4d4d !important; /* Red */
+      color: white !important;
+      opacity: 1;
+      cursor: pointer;
+      /* pointer-events: auto; */ /* Ensure clickable */
     }
     .reset-button {
       background-color: #555555; /* Dark Grey */
@@ -144,11 +160,13 @@
     .disabled {
       background-color: #d3d3d3 !important; /* Light Grey */
       cursor: not-allowed;
+      pointer-events: none; /* Prevent any click */
     }
     .winner-disabled {
       background-color: #a9a9a9 !important; /* Darker Light Grey */
       color: #555;
       cursor: not-allowed;
+      pointer-events: none; /* Prevent any click */
     }
     .readonly {
       background-color: #f0f0f0;
@@ -216,11 +234,11 @@
       color: white !important;
     }
 
-    /* Settings Modal */
+    /* Modal */
     .modal {
       display: none; /* Hidden by default */
       position: fixed; /* Stay in place */
-      z-index: 1; /* Sit on top */
+      z-index: 2; /* Sit on top */
       left: 0;
       top: 0;
       width: 100%; /* Full width */
@@ -253,6 +271,36 @@
     .close:focus {
       color: black;
       text-decoration: none;
+    }
+
+    /* Confirm Button */
+    .confirm-button {
+      background-color: #4CAF50; /* Green */
+      margin-top: 10px;
+      width: 100%;
+      padding: 10px;
+      font-size: 1em;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+      transition: background-color 0.3s;
+    }
+
+    .confirm-button:hover {
+      background-color: #45a049; /* Darker Green */
+    }
+
+    .confirm-button:disabled {
+      background-color: #a5d6a7;
+      cursor: not-allowed;
+    }
+
+    /* Selected Pao Player */
+    .selected-pao-player {
+      background-color: #ff4d4d !important; /* Red */
+      color: white !important;
+      opacity: 1;
+      cursor: pointer;
     }
   </style>
 </head>
@@ -323,36 +371,44 @@
       <button onclick="selectHuType('ziMo')" id="ziMoButton">自摸</button>
     </div>
 
-    <!-- 選擇放槍玩家 -->
-    <div id="chiHuOptions" class="hidden">
-      <label>選擇放槍玩家：</label>
-      <div class="button-group">
-        <div class="player-button">
-          <button onclick="selectPaoPlayer(0)" id="paoPlayer0">玩家1 (東)</button>
-        </div>
-        <div class="player-button">
-          <button onclick="selectPaoPlayer(1)" id="paoPlayer1">玩家2 (南)</button>
-        </div>
-        <div class="player-button">
-          <button onclick="selectPaoPlayer(2)" id="paoPlayer2">玩家3 (西)</button>
-        </div>
-        <div class="player-button">
-          <button onclick="selectPaoPlayer(3)" id="paoPlayer3">玩家4 (北)</button>
-        </div>
-      </div>
-    </div>
-
     <!-- 台數顯示 -->
-    <label>
+    <label id="chiHuOptions" class="hidden">
       台數：
     </label>
-    <div class="tai-number-container">
+    <div id="chiHuOptionsContainer" class="hidden tai-number-container">
       <button onclick="changeTaiNumber(1)">+</button>
       <input type="number" id="taiNumber" value="0" min="0" readonly class="readonly">
       <button onclick="changeTaiNumber(-1)">-</button>
     </div>
 
-    <button onclick="calculateScore()">確認得失分</button>
+    <!-- 確認與返回按鈕 -->
+    <div class="button-group scoring-buttons">
+      <button onclick="calculateScore()">確認得失分</button>
+      <button onclick="returnToMain()">返回主頁面</button>
+    </div>
+  </div>
+
+  <!-- 放槍玩家選擇模態視窗 -->
+  <div id="paoPlayerModal" class="modal">
+    <div class="modal-content">
+      <span class="close" onclick="closePaoPlayerModal()">&times;</span>
+      <h2>選擇放槍玩家</h2>
+      <div class="button-group">
+        <div class="player-button">
+          <button id="paoPlayer0" onclick="selectPaoPlayer(0)">玩家1 (東)</button>
+        </div>
+        <div class="player-button">
+          <button id="paoPlayer1" onclick="selectPaoPlayer(1)">玩家2 (南)</button>
+        </div>
+        <div class="player-button">
+          <button id="paoPlayer2" onclick="selectPaoPlayer(2)">玩家3 (西)</button>
+        </div>
+        <div class="player-button">
+          <button id="paoPlayer3" onclick="selectPaoPlayer(3)">玩家4 (北)</button>
+        </div>
+      </div>
+      <button class="confirm-button" id="confirmPaoPlayerButton" onclick="confirmPaoPlayer()" disabled>確定</button>
+    </div>
   </div>
 
   <!-- 顯示計算結果 -->
@@ -432,7 +488,7 @@
       { name: '玩家4', wind: '北' }
     ];
 
-    // 定義16種風位組合
+    // 定義風位組合順序
     const windCombinations = [
       '東東', '東南', '東西', '東北',
       '南東', '南南', '南西', '南北',
@@ -442,7 +498,7 @@
     let currentCombinationIndex = 0; // 初始組合索引
 
     let scores = [0, 0, 0, 0];
-    let dealer = 0; // 0: 玩家1, 1: 玩家2, 2: 玩家3, 3: 玩家4
+    let dealerIndex = 0; // 初始莊家索引（0: 玩家1）
     let dealerStreak = 0;
     let winner = null;
     let huType = null;
@@ -459,30 +515,24 @@
     }
 
     function updateDealerInfo() {
-      // Get current wind combination
+      // 更新當前風位組合顯示
       const currentWind = windCombinations[currentCombinationIndex];
       document.getElementById("currentWind").innerText = currentWind;
 
-      // Determine dealer based on current wind combination
-      // 假設風位組合中的第一個風位決定莊家
-      const dealerWind = currentWind.substring(0, 1); // 取得第一個字，例如 '東' from '東東'
-      dealer = players.findIndex(player => player.wind === dealerWind);
-      if (dealer === -1) dealer = 0; // 如果找不到，預設為玩家1
+      // 更新當前莊家顯示
+      document.getElementById("currentDealer").innerText = players[dealerIndex].name;
 
-      // Update current dealer display
-      document.getElementById("currentDealer").innerText = players[dealer].name;
-
-      // Update player buttons color
+      // 更新玩家按鈕顏色
       for (let i = 0; i < 4; i++) {
         const playerButton = document.querySelectorAll('.player-button button')[i];
-        if (i === dealer) {
+        if (i === dealerIndex) {
           playerButton.classList.add('dealer');
         } else {
           playerButton.classList.remove('dealer');
         }
       }
 
-      // Update scoreboard player names to reflect basic wind
+      // 更新總分表玩家名稱
       updateScoreboardPlayerNames();
     }
 
@@ -494,6 +544,12 @@
     }
 
     function selectWinner(playerIndex) {
+      const button = document.querySelectorAll('.player-button button')[playerIndex];
+      if (button.disabled) {
+        // 如果按鈕已被禁用，不執行任何操作
+        return;
+      }
+
       winner = playerIndex;
       const winnerInfo = `${players[winner].name} (${players[winner].wind})`;
       document.getElementById("winnerName").innerText = winnerInfo;
@@ -504,27 +560,36 @@
 
       huType = null;
       paoPlayer = null;
-      document.getElementById("chiHuOptions").classList.add("hidden");
       document.getElementById("taiNumber").value = 0;
 
       clearPaoPlayerSelection();
       clearHuTypeSelection();
+      highlightSelectedWinner(winner);
     }
 
-    function disableWinnerPaoButton() {
-      const winnerButton = document.getElementById("paoPlayer" + winner);
-      if (winnerButton) {
-        winnerButton.classList.add("winner-disabled");
-        winnerButton.disabled = true;
+    function highlightSelectedWinner(playerIndex) {
+      clearWinnerSelection();
+      const button = document.querySelectorAll('.player-button button')[playerIndex];
+      button.classList.add("winner-selected");
+      button.disabled = true;
+    }
+
+    function clearWinnerSelection() {
+      for (let i = 0; i < 4; i++) {
+        const button = document.querySelectorAll('.player-button button')[i];
+        button.classList.remove("winner-selected");
+        if (i !== winner) {
+          button.disabled = false;
+          button.classList.remove("disabled");
+          button.classList.remove("winner-disabled");
+        }
       }
     }
 
     function selectHuType(type) {
       huType = type;
       if (huType === "chiHu") {
-        document.getElementById("chiHuOptions").classList.remove("hidden");
-      } else {
-        document.getElementById("chiHuOptions").classList.add("hidden");
+        openPaoPlayerModal(); // 立即開啟模態視窗選擇放槍玩家
       }
       highlightSelectedHuType(type);
     }
@@ -533,6 +598,14 @@
       clearHuTypeSelection();
       const button = document.getElementById(type + "Button");
       button.classList.add("selected");
+      // 顯示或隱藏台數調整區域
+      if (type === "chiHu") {
+        document.getElementById("chiHuOptions").classList.remove("hidden");
+        document.getElementById("chiHuOptionsContainer").classList.remove("hidden");
+      } else {
+        document.getElementById("chiHuOptions").classList.add("hidden");
+        document.getElementById("chiHuOptionsContainer").classList.add("hidden");
+      }
     }
 
     function clearHuTypeSelection() {
@@ -543,6 +616,39 @@
       });
     }
 
+    function openPaoPlayerModal() {
+      const modal = document.getElementById("paoPlayerModal");
+      modal.style.display = "block";
+      highlightWinnerInModal();
+      resetPaoPlayerModal();
+    }
+
+    function closePaoPlayerModal() {
+      const modal = document.getElementById("paoPlayerModal");
+      modal.style.display = "none";
+    }
+
+    function highlightWinnerInModal() {
+      const winnerButton = document.getElementById(`paoPlayer${winner}`);
+      if (winnerButton) {
+        winnerButton.classList.add("winner-selected");
+        // winnerButton.disabled = true; // 已由 CSS 控制 pointer-events
+      }
+    }
+
+    function resetPaoPlayerModal() {
+      const paoButtons = document.querySelectorAll('#paoPlayerModal .player-button button');
+      paoButtons.forEach(button => {
+        if (!button.classList.contains("winner-selected")) {
+          button.classList.remove("loser-selected");
+          button.classList.remove("selected-pao-player");
+          // 不禁用其他按鈕，允許用戶切換選擇
+        }
+      });
+      paoPlayer = null;
+      document.getElementById("confirmPaoPlayerButton").disabled = true;
+    }
+
     function selectPaoPlayer(playerIndex) {
       if (playerIndex === winner) {
         alert("放槍玩家不能是贏家！");
@@ -550,23 +656,38 @@
       }
       paoPlayer = playerIndex;
       highlightSelectedPaoPlayer(playerIndex);
+      document.getElementById("confirmPaoPlayerButton").disabled = false;
     }
 
     function highlightSelectedPaoPlayer(playerIndex) {
-      clearPaoPlayerSelection();
-      const button = document.getElementById("paoPlayer" + playerIndex);
-      button.classList.add("selected");
-      button.disabled = true;
+      const paoButtons = document.querySelectorAll('#paoPlayerModal .player-button button');
+      paoButtons.forEach(button => {
+        if (button.getAttribute('onclick') === `selectPaoPlayer(${playerIndex})`) {
+          button.classList.add("loser-selected");
+          button.classList.add("selected-pao-player");
+        } else {
+          button.classList.remove("loser-selected");
+          button.classList.remove("selected-pao-player");
+        }
+      });
+    }
+
+    function confirmPaoPlayer() {
+      if (paoPlayer !== null) {
+        closePaoPlayerModal();
+        document.getElementById("chiHuOptions").classList.remove("hidden"); // 顯示台數調整區域
+      }
     }
 
     function clearPaoPlayerSelection() {
       for (let i = 0; i < 4; i++) {
         const button = document.getElementById("paoPlayer" + i);
-        button.classList.remove("selected");
+        button.classList.remove("loser-selected");
+        button.classList.remove("selected-pao-player");
         if (i !== winner) {
           button.disabled = false;
           button.classList.remove("disabled");
-          button.classList.remove("winner-disabled");
+          button.classList.remove("winner-selected");
         }
       }
     }
@@ -597,10 +718,9 @@
 
       // 初始化變數
       let additionalTai = 0;
-      let dealerPenalty = 0;
 
       if (huType === "chiHu") {
-        if (paoPlayer === dealer) {
+        if (paoPlayer === dealerIndex) {
           // 莊家被放槍，增加一台
           additionalTai = 1;
           taiUsed += additionalTai;
@@ -616,15 +736,15 @@
       const dealerBonus = getDealerBonus(dealerStreak);
       let singleWinScore = baseScore + (taiMultiplier * taiUsed);
 
-      if (huType === "chiHu" && winner === dealer) {
+      if (huType === "chiHu" && winner === dealerIndex) {
         // 莊家吃胡，增加額外分數
         singleWinScore += (taiMultiplier * dealerBonus);
         dealerStreak++;
       }
 
       if (huType === "chiHu") {
-        if (winner !== dealer) {
-          if (paoPlayer === dealer) {
+        if (winner !== dealerIndex) {
+          if (paoPlayer === dealerIndex) {
             // 莊家被放槍，扣除莊家分數
             scores[winner] += singleWinScore;
             scores[paoPlayer] -= singleWinScore;
@@ -694,9 +814,40 @@
         document.getElementById("taiNumber").value = taiUsed;
       }
 
+      // 更新風位和莊家
+      updateWindAndDealer();
+
       // 顯示結果
       document.getElementById("scoringSection").classList.add("hidden");
       document.getElementById("resultSection").classList.remove("hidden");
+    }
+
+    function updateWindAndDealer() {
+      if (winner !== dealerIndex) {
+        // 非莊家勝利，莊家和風位更換
+        rotateWindsToNewDealer(winner);
+      } else {
+        // 莊家勝利，風位按照順時針方向輪換
+        rotateWindsClockwise();
+      }
+      updateDealerInfo();
+    }
+
+    function rotateWindsClockwise() {
+      // 將風位順時針旋轉至下一個組合
+      currentCombinationIndex = (currentCombinationIndex + 1) % windCombinations.length;
+    }
+
+    function rotateWindsToNewDealer(newDealerIndex) {
+      // 將風位調整至新莊家為東風位
+      // 找到新莊家應該成為東風位的組合
+      // 依照 windCombinations 順序，找到第一個以新莊家風位開頭的組合
+      const newDealerWind = players[newDealerIndex].wind;
+      const targetIndex = windCombinations.findIndex(combination => combination.startsWith(newDealerWind));
+      if (targetIndex !== -1) {
+        currentCombinationIndex = targetIndex;
+        dealerIndex = newDealerIndex;
+      }
     }
 
     function updateHistory() {
@@ -725,12 +876,13 @@
       document.getElementById("resultSection").classList.add("hidden");
       clearPaoPlayerSelection();
       clearHuTypeSelection();
+      clearWinnerSelection();
     }
 
     function resetGame() {
       if (confirm("確定要重置遊戲嗎？所有分數和記錄將被清除。")) {
         scores = [0, 0, 0, 0];
-        dealer = 0;
+        dealerIndex = 0;
         dealerStreak = 0;
         winner = null;
         huType = null;
@@ -739,6 +891,7 @@
         winCounts = [0, 0, 0, 0];
         totalRounds = 0;
         currentCombinationIndex = 0;
+        winds = windCombinations[currentCombinationIndex].split('');
 
         document.getElementById("score0").innerText = scores[0];
         document.getElementById("score1").innerText = scores[1];
@@ -750,6 +903,7 @@
         document.getElementById("resultSection").classList.add("hidden");
         clearPaoPlayerSelection();
         clearHuTypeSelection();
+        clearWinnerSelection();
         updateHistory();
         updateScoreboard();
 
@@ -760,10 +914,22 @@
       }
     }
 
+    // 新增的返回主頁面函式
+    function returnToMain() {
+      document.getElementById("playerSelection").classList.remove("hidden");
+      document.getElementById("scoringSection").classList.add("hidden");
+      huType = null;
+      paoPlayer = null;
+      document.getElementById("taiNumber").value = 0;
+      clearPaoPlayerSelection();
+      clearHuTypeSelection();
+      clearWinnerSelection();
+    }
+
     // Settings Modal Functions
     const settingsModal = document.getElementById("settingsModal");
     const openSettingsButton = document.getElementById("openSettingsButton");
-    const closeSettingsButton = document.getElementsByClassName("close")[0];
+    const closeSettingsButton = document.querySelector("#settingsModal .close");
 
     openSettingsButton.onclick = function() {
       settingsModal.style.display = "block";
@@ -773,9 +939,43 @@
       settingsModal.style.display = "none";
     }
 
+    // Close PaoPlayer Modal when clicking outside of it
+    const paoPlayerModal = document.getElementById("paoPlayerModal");
+    const closePaoPlayerButton = document.querySelector("#paoPlayerModal .close");
+
+    function closePaoPlayerModal() {
+      paoPlayerModal.style.display = "none";
+    }
+
     window.onclick = function(event) {
       if (event.target == settingsModal) {
         settingsModal.style.display = "none";
+      }
+      if (event.target == paoPlayerModal) {
+        closePaoPlayerModal();
+      }
+    }
+
+    // Confirm button functionality
+    const confirmPaoPlayerButton = document.getElementById("confirmPaoPlayerButton");
+    confirmPaoPlayerButton.addEventListener('click', confirmPaoPlayer);
+
+    // Event listener for pao player selection buttons
+    const paoPlayerButtons = document.querySelectorAll('#paoPlayerModal .player-button button');
+    paoPlayerButtons.forEach(button => {
+      button.addEventListener('click', function() {
+        const onclickAttr = this.getAttribute('onclick');
+        const playerIndex = parseInt(onclickAttr.match(/\d+/)[0]);
+        selectPaoPlayer(playerIndex);
+      });
+    });
+
+    // Confirm Pao Player Selection
+    function confirmPaoPlayer() {
+      if (paoPlayer !== null) {
+        closePaoPlayerModal();
+        document.getElementById("chiHuOptions").classList.remove("hidden"); // 顯示台數調整區域
+        document.getElementById("chiHuOptionsContainer").classList.remove("hidden");
       }
     }
 
