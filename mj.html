@@ -2,7 +2,7 @@
 <html lang="zh-Hant">
 <head>
   <meta charset="UTF-8">
-  <title>麻將計分系統 - 底 + 台倍率 + 莊家連莊</title>
+  <title>麻將計分系統</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <style>
     body {
@@ -21,7 +21,7 @@
       margin: 10px auto;
       border: 1px solid #ccc;
       border-radius: 8px;
-      max-width: 100%;
+      max-width: 600px;
       box-shadow: 0 2px 5px rgba(0,0,0,0.1);
     }
     /* Remove box-shadow from scoreboardSection */
@@ -30,42 +30,54 @@
     }
     button {
       margin: 5px 2px;
-      padding: 10px;
+      padding: 10px 15px; /* Increased padding for better readability */
       font-size: 1em;
       cursor: pointer;
       border: none;
       border-radius: 5px;
-      background-color: #4CAF50;
+      background-color: #555555; /* Dark Grey */
       color: white;
       transition: background-color 0.3s;
-      flex: 1 1 40%;
+      flex: 1 1 45%; /* Adjusted for better layout */
+      min-width: 100px; /* Increased min-width for longer labels */
     }
     button:hover {
-      background-color: #45a049;
+      background-color: #333333; /* Darker Grey */
     }
     .hidden {
       display: none;
     }
     .button-group {
       display: flex;
-      justify-content: space-around;
+      justify-content: space-between;
       flex-wrap: wrap;
       margin-top: 10px;
     }
-    .button-group button {
-      flex: 1 1 40%;
-      margin: 5px;
-      background-color: #008CBA;
-      color: white;
+    .player-button {
+      display: flex;
+      align-items: center;
+      width: 48%; /* Slightly narrower */
+      margin-bottom: 10px;
     }
-    .button-group button:hover {
-      background-color: #007bb5;
+    .player-button button {
+      flex: 1;
+      padding: 10px 15px; /* Increased padding */
+      background-color: #555555; /* Dark Grey */
+      color: white;
+      border: none;
+      border-radius: 5px;
+      transition: background-color 0.3s;
+      font-size: 1em;
+      min-width: 100px; /* Increased min-width */
+    }
+    .player-button button:hover {
+      background-color: #333333; /* Darker Grey */
     }
     .action-button {
-      background-color: #f44336;
+      background-color: #555555; /* Dark Grey */
     }
     .action-button:hover {
-      background-color: #da190b;
+      background-color: #333333; /* Darker Grey */
     }
     label {
       display: block;
@@ -85,24 +97,34 @@
     }
     .tai-number-container {
       display: flex;
+      flex-direction: column; /* Stack buttons vertically */
       align-items: center;
       margin-top: 10px;
     }
     .tai-number-container button {
-      width: 40px;
-      background-color: #555;
+      width: 40px; /* Increased width for better clickability */
+      background-color: #555555; /* Dark Grey */
       color: white;
-      font-size: 1em;
-      padding: 8px 0;
+      font-size: 1.2em;
+      padding: 5px 0; /* Reduced padding */
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+      transition: background-color 0.3s;
+      margin: 5px 0; /* Space between buttons */
     }
     .tai-number-container button:hover {
-      background-color: #333;
+      background-color: #333333; /* Darker Grey */
     }
     .tai-number-container input[type="number"] {
-      flex: 1;
+      width: 60%; /* Increased width */
       text-align: center;
-      margin: 0 10px;
+      margin: 0;
       font-size: 1em;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      background-color: #f0f0f0;
+      cursor: not-allowed;
     }
     .score-display {
       text-align: center;
@@ -110,21 +132,21 @@
       margin: 10px 0;
     }
     .selected {
-      background-color: #FF5722 !important;
+      background-color: #777777 !important; /* Medium Grey */
       color: white;
     }
     .reset-button {
-      background-color: #f44336;
+      background-color: #555555; /* Dark Grey */
     }
     .reset-button:hover {
-      background-color: #da190b;
+      background-color: #333333; /* Darker Grey */
     }
     .disabled {
-      background-color: #ccc !important;
+      background-color: #d3d3d3 !important; /* Light Grey */
       cursor: not-allowed;
     }
     .winner-disabled {
-      background-color: #e0e0e0 !important;
+      background-color: #a9a9a9 !important; /* Darker Light Grey */
       color: #555;
       cursor: not-allowed;
     }
@@ -165,6 +187,9 @@
 
     /* Responsive Design */
     @media (max-width: 600px) {
+      .player-button {
+        width: 100%;
+      }
       .button-group {
         flex-direction: column;
         align-items: center;
@@ -173,46 +198,114 @@
         flex: 1 1 80%;
       }
       .tai-number-container {
-        flex-direction: column;
+        flex-direction: column; /* Ensure vertical stacking on small screens */
+        justify-content: center;
       }
       .tai-number-container button, .tai-number-container input[type="number"] {
-        width: 80%;
+        width: 30%; /* Adjust width for smaller screens */
         margin: 5px 0;
       }
       #historyList, #scoreboard {
         max-height: 150px;
       }
     }
+
+    /* Dealer Button Red */
+    .dealer {
+      background-color: red !important;
+      color: white !important;
+    }
+
+    /* Settings Modal */
+    .modal {
+      display: none; /* Hidden by default */
+      position: fixed; /* Stay in place */
+      z-index: 1; /* Sit on top */
+      left: 0;
+      top: 0;
+      width: 100%; /* Full width */
+      height: 100%; /* Full height */
+      overflow: auto; /* Enable scroll if needed */
+      background-color: rgba(0,0,0,0.4); /* Black w/ opacity */
+    }
+
+    /* Modal Content */
+    .modal-content {
+      background-color: #fefefe;
+      margin: 10% auto; /* 10% from the top and centered */
+      padding: 20px;
+      border: 1px solid #888;
+      border-radius: 8px;
+      width: 90%; /* Could be more or less, depending on screen size */
+      max-width: 500px;
+    }
+
+    /* Close Button */
+    .close {
+      color: #aaa;
+      float: right;
+      font-size: 28px;
+      font-weight: bold;
+      cursor: pointer;
+    }
+
+    .close:hover,
+    .close:focus {
+      color: black;
+      text-decoration: none;
+    }
   </style>
 </head>
 <body>
   <h1>麻將計分系統</h1>
 
-  <!-- 基本設定 -->
-  <div id="baseSetting">
-    <h2>基本設定</h2>
-    <label>
-      底：
-      <input type="number" id="baseScoreInput" value="100" min="0">
-    </label>
-    <label>
-      台的倍率：
-      <input type="number" id="taiMultiplierInput" value="20" min="0">
-    </label>
+  <!-- Current Wind and Dealer Display -->
+  <div id="currentStatus" style="text-align: center; margin-bottom: 10px;">
+    <div class="score-display">
+      當前風位組合：<span id="currentWind">東東</span>
+    </div>
+    <div class="score-display">
+      本局莊家：<span id="currentDealer">玩家1</span>
+    </div>
+  </div>
+
+  <!-- Settings Button -->
+  <div style="text-align: center; margin-bottom: 10px;">
+    <button id="openSettingsButton">設定</button>
+  </div>
+
+  <!-- Settings Modal -->
+  <div id="settingsModal" class="modal">
+    <div class="modal-content">
+      <span class="close" onclick="closeSettings()">&times;</span>
+      <h2>基本設定</h2>
+      <label>
+        底：
+        <input type="number" id="baseScoreInput" value="100" min="0">
+      </label>
+      <label>
+        台的倍率：
+        <input type="number" id="taiMultiplierInput" value="20" min="0">
+      </label>
+    </div>
   </div>
 
   <!-- 選擇勝方 -->
   <div id="playerSelection">
     <h2>選擇勝方</h2>
-    <div class="score-display">
-      目前莊家：<span id="dealerLabel">玩家1</span>  
-      （連莊次數：<span id="dealerStreakLabel">0</span>）
-    </div>
     <div class="button-group">
-      <button onclick="selectWinner(0)">玩家1</button>
-      <button onclick="selectWinner(1)">玩家2</button>
-      <button onclick="selectWinner(2)">玩家3</button>
-      <button onclick="selectWinner(3)">玩家4</button>
+      <div class="player-button">
+        <button onclick="selectWinner(0)">玩家1 (東)</button>
+      </div>
+      <div class="player-button">
+        <button onclick="selectWinner(1)">玩家2 (南)</button>
+      </div>
+      <div class="player-button">
+        <button onclick="selectWinner(2)">玩家3 (西)</button>
+      </div>
+      <div class="player-button">
+        <button onclick="selectWinner(3)">玩家4 (北)</button>
+      </div>
     </div>
   </div>
 
@@ -220,7 +313,7 @@
   <div id="scoringSection" class="hidden">
     <h2>計分</h2>
     <div class="score-display">
-      本局贏家：<span id="winnerName">玩家1</span>
+      本局贏家：<span id="winnerName">玩家1 (東)</span>
     </div>
 
     <!-- 選擇胡牌類型 -->
@@ -234,10 +327,18 @@
     <div id="chiHuOptions" class="hidden">
       <label>選擇放槍玩家：</label>
       <div class="button-group">
-        <button onclick="selectPaoPlayer(0)" id="paoPlayer0">玩家1</button>
-        <button onclick="selectPaoPlayer(1)" id="paoPlayer1">玩家2</button>
-        <button onclick="selectPaoPlayer(2)" id="paoPlayer2">玩家3</button>
-        <button onclick="selectPaoPlayer(3)" id="paoPlayer3">玩家4</button>
+        <div class="player-button">
+          <button onclick="selectPaoPlayer(0)" id="paoPlayer0">玩家1 (東)</button>
+        </div>
+        <div class="player-button">
+          <button onclick="selectPaoPlayer(1)" id="paoPlayer1">玩家2 (南)</button>
+        </div>
+        <div class="player-button">
+          <button onclick="selectPaoPlayer(2)" id="paoPlayer2">玩家3 (西)</button>
+        </div>
+        <div class="player-button">
+          <button onclick="selectPaoPlayer(3)" id="paoPlayer3">玩家4 (北)</button>
+        </div>
       </div>
     </div>
 
@@ -246,9 +347,9 @@
       台數：
     </label>
     <div class="tai-number-container">
-      <button onclick="changeTaiNumber(-1)">-</button>
-      <input type="number" id="taiNumber" value="0" min="0" readonly class="readonly">
       <button onclick="changeTaiNumber(1)">+</button>
+      <input type="number" id="taiNumber" value="0" min="0" readonly class="readonly">
+      <button onclick="changeTaiNumber(-1)">-</button>
     </div>
 
     <button onclick="calculateScore()">確認得失分</button>
@@ -258,24 +359,14 @@
   <div id="resultSection" class="hidden">
     <h2>當前分數</h2>
     <div class="score-display">
-      玩家1：<span id="score0">0</span> 分<br>
-      玩家2：<span id="score1">0</span> 分<br>
-      玩家3：<span id="score2">0</span> 分<br>
-      玩家4：<span id="score3">0</span> 分
+      玩家1 (東)：<span id="score0">0</span> 分<br>
+      玩家2 (南)：<span id="score1">0</span> 分<br>
+      玩家3 (西)：<span id="score2">0</span> 分<br>
+      玩家4 (北)：<span id="score3">0</span> 分
     </div>
     <div class="button-group">
       <button onclick="resetSelection()">重新選擇勝方</button>
       <button class="reset-button" onclick="resetGame()">重置遊戲</button>
-    </div>
-  </div>
-
-  <!-- 成績記錄 -->
-  <div id="historySection">
-    <h2>成績記錄</h2>
-    <div id="historyList">
-      <ul id="historyUl">
-        <!-- 成績記錄項目將在此處顯示 -->
-      </ul>
     </div>
   </div>
 
@@ -294,25 +385,25 @@
         </thead>
         <tbody>
           <tr>
-            <td>玩家1</td>
+            <td>玩家1 (東)</td>
             <td id="totalScore0">0</td>
             <td id="winCount0">0</td>
             <td id="winRate0">0%</td>
           </tr>
           <tr>
-            <td>玩家2</td>
+            <td>玩家2 (南)</td>
             <td id="totalScore1">0</td>
             <td id="winCount1">0</td>
             <td id="winRate1">0%</td>
           </tr>
           <tr>
-            <td>玩家3</td>
+            <td>玩家3 (西)</td>
             <td id="totalScore2">0</td>
             <td id="winCount2">0</td>
             <td id="winRate2">0%</td>
           </tr>
           <tr>
-            <td>玩家4</td>
+            <td>玩家4 (北)</td>
             <td id="totalScore3">0</td>
             <td id="winCount3">0</td>
             <td id="winRate3">0%</td>
@@ -322,14 +413,40 @@
     </div>
   </div>
 
+  <!-- 成績記錄 -->
+  <div id="historySection">
+    <h2>成績記錄</h2>
+    <div id="historyList">
+      <ul id="historyUl">
+        <!-- 成績記錄項目將在此處顯示 -->
+      </ul>
+    </div>
+  </div>
+
   <script>
+    // 定義玩家資訊與基本風位
+    const players = [
+      { name: '玩家1', wind: '東' },
+      { name: '玩家2', wind: '南' },
+      { name: '玩家3', wind: '西' },
+      { name: '玩家4', wind: '北' }
+    ];
+
+    // 定義16種風位組合
+    const windCombinations = [
+      '東東', '東南', '東西', '東北',
+      '南東', '南南', '南西', '南北',
+      '西東', '西南', '西西', '西北',
+      '北東', '北南', '北西', '北北'
+    ];
+    let currentCombinationIndex = 0; // 初始組合索引
+
     let scores = [0, 0, 0, 0];
-    let dealer = 0;
+    let dealer = 0; // 0: 玩家1, 1: 玩家2, 2: 玩家3, 3: 玩家4
     let dealerStreak = 0;
     let winner = null;
     let huType = null;
     let paoPlayer = null;
-    let ziMoAddedTai = false;
     let history = [];
     let winCounts = [0, 0, 0, 0];
     let totalRounds = 0;
@@ -342,13 +459,44 @@
     }
 
     function updateDealerInfo() {
-      document.getElementById("dealerLabel").innerText = "玩家" + (dealer + 1);
-      document.getElementById("dealerStreakLabel").innerText = dealerStreak;
+      // Get current wind combination
+      const currentWind = windCombinations[currentCombinationIndex];
+      document.getElementById("currentWind").innerText = currentWind;
+
+      // Determine dealer based on current wind combination
+      // 假設風位組合中的第一個風位決定莊家
+      const dealerWind = currentWind.substring(0, 1); // 取得第一個字，例如 '東' from '東東'
+      dealer = players.findIndex(player => player.wind === dealerWind);
+      if (dealer === -1) dealer = 0; // 如果找不到，預設為玩家1
+
+      // Update current dealer display
+      document.getElementById("currentDealer").innerText = players[dealer].name;
+
+      // Update player buttons color
+      for (let i = 0; i < 4; i++) {
+        const playerButton = document.querySelectorAll('.player-button button')[i];
+        if (i === dealer) {
+          playerButton.classList.add('dealer');
+        } else {
+          playerButton.classList.remove('dealer');
+        }
+      }
+
+      // Update scoreboard player names to reflect basic wind
+      updateScoreboardPlayerNames();
+    }
+
+    function updateScoreboardPlayerNames() {
+      for (let i = 0; i < 4; i++) {
+        const scoreboardRow = document.querySelectorAll('#scoreboard tbody tr')[i];
+        scoreboardRow.children[0].innerText = `${players[i].name} (${players[i].wind})`;
+      }
     }
 
     function selectWinner(playerIndex) {
       winner = playerIndex;
-      document.getElementById("winnerName").innerText = "玩家" + (winner + 1);
+      const winnerInfo = `${players[winner].name} (${players[winner].wind})`;
+      document.getElementById("winnerName").innerText = winnerInfo;
 
       document.getElementById("playerSelection").classList.add("hidden");
       document.getElementById("scoringSection").classList.remove("hidden");
@@ -361,9 +509,6 @@
 
       clearPaoPlayerSelection();
       clearHuTypeSelection();
-      ziMoAddedTai = false;
-
-      disableWinnerPaoButton();
     }
 
     function disableWinnerPaoButton() {
@@ -380,9 +525,6 @@
         document.getElementById("chiHuOptions").classList.remove("hidden");
       } else {
         document.getElementById("chiHuOptions").classList.add("hidden");
-        if (!ziMoAddedTai) {
-          ziMoAddedTai = true;
-        }
       }
       highlightSelectedHuType(type);
     }
@@ -450,30 +592,55 @@
 
       const baseScore = parseInt(document.getElementById("baseScoreInput").value) || 0;
       const taiMultiplier = parseInt(document.getElementById("taiMultiplierInput").value) || 0;
-      const taiInput = parseInt(document.getElementById("taiNumber").value) || 0;
+      let taiInput = parseInt(document.getElementById("taiNumber").value) || 0;
       let taiUsed = taiInput;
 
+      // 初始化變數
+      let additionalTai = 0;
+      let dealerPenalty = 0;
+
+      if (huType === "chiHu") {
+        if (paoPlayer === dealer) {
+          // 莊家被放槍，增加一台
+          additionalTai = 1;
+          taiUsed += additionalTai;
+          alert(`莊家放槍，已自動增加一台！目前台數：${taiUsed}`);
+        }
+      }
+
       if (huType === "ziMo") {
+        // 自摸時增加一台
         taiUsed += 1;
       }
 
       const dealerBonus = getDealerBonus(dealerStreak);
       let singleWinScore = baseScore + (taiMultiplier * taiUsed);
 
-      if (winner === dealer) {
+      if (huType === "chiHu" && winner === dealer) {
+        // 莊家吃胡，增加額外分數
         singleWinScore += (taiMultiplier * dealerBonus);
         dealerStreak++;
-      } else {
-        const dealerPenalty = taiMultiplier * dealerBonus;
-        scores[dealer] -= dealerPenalty;
-        dealer = (dealer + 1) % 4;
-        dealerStreak = 0;
       }
 
       if (huType === "chiHu") {
-        scores[winner] += singleWinScore;
-        scores[paoPlayer] -= singleWinScore;
+        if (winner !== dealer) {
+          if (paoPlayer === dealer) {
+            // 莊家被放槍，扣除莊家分數
+            scores[winner] += singleWinScore;
+            scores[paoPlayer] -= singleWinScore;
+          } else {
+            // 普通玩家被放槍，扣除放槍玩家分數
+            scores[winner] += singleWinScore;
+            scores[paoPlayer] -= singleWinScore;
+            // 莊家不參與
+          }
+        } else {
+          // 贏家是莊家，扣除放槍玩家分數
+          scores[winner] += singleWinScore;
+          scores[paoPlayer] -= singleWinScore;
+        }
       } else if (huType === "ziMo") {
+        // 自摸，贏家獲得分數，其他玩家扣分
         scores[winner] += singleWinScore * 3;
         for (let i = 0; i < 4; i++) {
           if (i !== winner) {
@@ -502,9 +669,12 @@
             change = `-${singleWinScore}`;
           }
         }
-        scoreChanges.push(`玩家${i + 1} ${change}`);
+        scoreChanges.push(`${players[i].name} (${players[i].wind}) ${change}`);
       }
       record += scoreChanges.join(", ");
+      if (additionalTai > 0) {
+        record += `, 增加台數：+${additionalTai}`;
+      }
       history.push(record);
       updateHistory();
 
@@ -518,6 +688,11 @@
       document.getElementById("score1").innerText = scores[1];
       document.getElementById("score2").innerText = scores[2];
       document.getElementById("score3").innerText = scores[3];
+
+      // 更新台數顯示
+      if (additionalTai > 0) {
+        document.getElementById("taiNumber").value = taiUsed;
+      }
 
       // 顯示結果
       document.getElementById("scoringSection").classList.add("hidden");
@@ -550,7 +725,6 @@
       document.getElementById("resultSection").classList.add("hidden");
       clearPaoPlayerSelection();
       clearHuTypeSelection();
-      ziMoAddedTai = false;
     }
 
     function resetGame() {
@@ -561,10 +735,10 @@
         winner = null;
         huType = null;
         paoPlayer = null;
-        ziMoAddedTai = false;
         history = [];
         winCounts = [0, 0, 0, 0];
         totalRounds = 0;
+        currentCombinationIndex = 0;
 
         document.getElementById("score0").innerText = scores[0];
         document.getElementById("score1").innerText = scores[1];
@@ -579,9 +753,29 @@
         updateHistory();
         updateScoreboard();
 
+        // Reset settings to default
         document.getElementById("baseScoreInput").value = 100;
         document.getElementById("taiMultiplierInput").value = 20;
         document.getElementById("taiNumber").value = 0;
+      }
+    }
+
+    // Settings Modal Functions
+    const settingsModal = document.getElementById("settingsModal");
+    const openSettingsButton = document.getElementById("openSettingsButton");
+    const closeSettingsButton = document.getElementsByClassName("close")[0];
+
+    openSettingsButton.onclick = function() {
+      settingsModal.style.display = "block";
+    }
+
+    function closeSettings() {
+      settingsModal.style.display = "none";
+    }
+
+    window.onclick = function(event) {
+      if (event.target == settingsModal) {
+        settingsModal.style.display = "none";
       }
     }
 
