@@ -95,7 +95,7 @@
                 oscillator1.start();
                 oscillator2.start();
 
-                const duration = 200; // 每個音符持續時間（毫秒）
+                const duration = 500; // 每個音符持續時間（毫秒），從200ms增至500ms
 
                 setTimeout(() => {
                     oscillator1.stop();
@@ -121,8 +121,8 @@
             // 為了避免多次點擊發送時創建多個 AudioContext，先檢查是否已有正在運行的 AudioContext
             for (let char of input) {
                 await playSingleDTMF(char, new (window.AudioContext || window.webkitAudioContext)());
-                // 在音符之間添加間隔
-                await new Promise(resolve => setTimeout(resolve, 100));
+                // 在音符之間添加間隔，從100ms增至300ms
+                await new Promise(resolve => setTimeout(resolve, 300));
             }
         }
 
@@ -164,6 +164,17 @@
         }
 
         /**
+         * 應用漢明窗函數
+         * @param {Float32Array} signal - 音頻信號
+         * @returns {Float32Array} - 應用窗口函數後的信號
+         */
+        function applyWindow(signal) {
+            return signal.map((sample, index) => {
+                return sample * (0.54 - 0.46 * Math.cos((2 * Math.PI * index) / (signal.length - 1)));
+            });
+        }
+
+        /**
          * DTMF 識別主函數，使用 Goertzel 演算法
          * @param {AnalyserNode} analyser - 分析器節點
          * @param {Float32Array} buffer - 音頻緩衝
@@ -173,13 +184,13 @@
             const lowFreqs = [697, 770, 852, 941];
             const highFreqs = [1209, 1336, 1477];
             const targetFreqs = [...lowFreqs, ...highFreqs];
-            const detectedKeys = [];
 
             function process() {
                 if (!isListening) return;
 
                 analyser.getFloatTimeDomainData(buffer);
-                const frequenciesDetected = goertzel(buffer, targetFreqs, sampleRate);
+                const windowedSignal = applyWindow(buffer);
+                const frequenciesDetected = goertzel(windowedSignal, targetFreqs, sampleRate);
 
                 // 分離低頻和高頻
                 const detectedLow = lowFreqs.filter(freq => frequenciesDetected.includes(freq));
@@ -194,6 +205,12 @@
                         if (key && !recognizedKeys.includes(key)) {
                             recognizedKeys += key;
                             document.getElementById('result').innerText = recognizedKeys;
+                            
+                            // 如果識別到 '#'，則自動停止監聽
+                            if (key === '#') {
+                                stopListening();
+                                return;
+                            }
                         }
                     }
                 }
@@ -231,13 +248,17 @@
                     q1 = q0;
                 }
 
-                const magnitude = Math.sqrt(q1 * q1 + q2 * q2 - q1 * q2 * coeff);
+                const real = (q1 - q2 * cosine);
+                const imag = (q2 * sine);
+                const magnitude = Math.sqrt(real * real + imag * imag);
 
                 // 設定一個門檻值，根據需要進行調整
-                const threshold = 0.05; // 這個值可能需要根據實際情況調整
+                const threshold = 0.1; // 增加門檻值以提高抗噪能力
 
                 if (magnitude > threshold) {
-                    detected.push(freq);
+                    // 四捨五入到最接近的10Hz
+                    const roundedFreq = Math.round(freq / 10) * 10;
+                    detected.push(roundedFreq);
                 }
             });
 
