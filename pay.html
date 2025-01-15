@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <title>DTMF 通信系統</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+        }
+        .section {
+            margin-bottom: 30px;
+        }
+        .buttons button {
+            margin: 5px;
+            padding: 10px 15px;
+            font-size: 16px;
+        }
+        #sendSection, #receiveSection {
+            border: 1px solid #ccc;
+            padding: 20px;
+            border-radius: 8px;
+        }
+        input[type="text"] {
+            width: 80%;
+            padding: 10px;
+            font-size: 16px;
+            margin-right: 10px;
+        }
+    </style>
+</head>
+<body>
+    <h1>DTMF 通信系統</h1>
+
+    <!-- 發送訊息區域 -->
+    <div id="sendSection" class="section">
+        <h2>發送訊息</h2>
+        <input type="text" id="dtmfInput" placeholder="輸入 1234567890# 的字串">
+        <button onclick="sendDTMF()">發送</button>
+    </div>
+
+    <!-- 接收訊息區域 -->
+    <div id="receiveSection" class="section">
+        <h2>接收訊息</h2>
+        <button onclick="startListening()">開始監聽</button>
+        <button onclick="stopListening()">停止監聽</button>
+        <p>識別結果：<span id="result">尚未識別</span></p>
+    </div>
+
+    <script>
+        // DTMF 頻率定義
+        const dtmfFrequencies = {
+            '1': [697, 1209],
+            '2': [697, 1336],
+            '3': [697, 1477],
+            '4': [770, 1209],
+            '5': [770, 1336],
+            '6': [770, 1477],
+            '7': [852, 1209],
+            '8': [852, 1336],
+            '9': [852, 1477],
+            '0': [941, 1336],
+            '#': [941, 1477]
+        };
+
+        /**
+         * 生成並播放單個 DTMF 音符
+         * @param {string} key - 要播放的鍵
+         * @param {AudioContext} audioCtx - 音頻上下文
+         * @returns {Promise} - 播放完成的 Promise
+         */
+        function playSingleDTMF(key, audioCtx) {
+            return new Promise((resolve, reject) => {
+                const frequencies = dtmfFrequencies[key];
+                if (!frequencies) {
+                    alert(`無效的按鍵: ${key}`);
+                    resolve();
+                    return;
+                }
+
+                const oscillator1 = audioCtx.createOscillator();
+                const oscillator2 = audioCtx.createOscillator();
+                const gainNode = audioCtx.createGain();
+
+                oscillator1.frequency.value = frequencies[0];
+                oscillator2.frequency.value = frequencies[1];
+
+                oscillator1.type = 'sine';
+                oscillator2.type = 'sine';
+
+                oscillator1.connect(gainNode);
+                oscillator2.connect(gainNode);
+                gainNode.connect(audioCtx.destination);
+
+                oscillator1.start();
+                oscillator2.start();
+
+                const duration = 200; // 每個音符持續時間（毫秒）
+
+                setTimeout(() => {
+                    oscillator1.stop();
+                    oscillator2.stop();
+                    audioCtx.close();
+                    resolve();
+                }, duration);
+            });
+        }
+
+        /**
+         * 發送一串 DTMF 音符
+         */
+        async function sendDTMF() {
+            const input = document.getElementById('dtmfInput').value.trim();
+            const validKeys = /^[0-9#]+$/;
+
+            if (!validKeys.test(input)) {
+                alert('請輸入有效的字串，只能包含 1234567890#');
+                return;
+            }
+
+            // 為了避免多次點擊發送時創建多個 AudioContext，先檢查是否已有正在運行的 AudioContext
+            for (let char of input) {
+                await playSingleDTMF(char, new (window.AudioContext || window.webkitAudioContext)());
+                // 在音符之間添加間隔
+                await new Promise(resolve => setTimeout(resolve, 100));
+            }
+        }
+
+        // DTMF 接收部分
+        let audioContext;
+        let analyser;
+        let microphone;
+        let isListening = false;
+        let recognizedKeys = '';
+
+        function startListening() {
+            if (isListening) return;
+
+            navigator.mediaDevices.getUserMedia({ audio: true })
+                .then(stream => {
+                    audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                    const sampleRate = audioContext.sampleRate;
+                    analyser = audioContext.createAnalyser();
+                    analyser.fftSize = 2048;
+                    const bufferLength = analyser.fftSize;
+                    const buffer = new Float32Array(analyser.fftSize);
+                    microphone = audioContext.createMediaStreamSource(stream);
+                    microphone.connect(analyser);
+                    isListening = true;
+                    recognizedKeys = '';
+                    document.getElementById('result').innerText = '尚未識別';
+                    recognizeDTMF(analyser, buffer, sampleRate);
+                })
+                .catch(err => {
+                    console.error('獲取麥克風失敗：', err);
+                });
+        }
+
+        function stopListening() {
+            if (!isListening) return;
+            audioContext.close();
+            isListening = false;
+            document.getElementById('result').innerText = recognizedKeys || '尚未識別';
+        }
+
+        /**
+         * DTMF 識別主函數，使用 Goertzel 演算法
+         * @param {AnalyserNode} analyser - 分析器節點
+         * @param {Float32Array} buffer - 音頻緩衝
+         * @param {number} sampleRate - 采樣率
+         */
+        function recognizeDTMF(analyser, buffer, sampleRate) {
+            const lowFreqs = [697, 770, 852, 941];
+            const highFreqs = [1209, 1336, 1477];
+            const targetFreqs = [...lowFreqs, ...highFreqs];
+            const detectedKeys = [];
+
+            function process() {
+                if (!isListening) return;
+
+                analyser.getFloatTimeDomainData(buffer);
+                const frequenciesDetected = goertzel(buffer, targetFreqs, sampleRate);
+
+                // 分離低頻和高頻
+                const detectedLow = lowFreqs.filter(freq => frequenciesDetected.includes(freq));
+                const detectedHigh = highFreqs.filter(freq => frequenciesDetected.includes(freq));
+
+                // 尋找符合 DTMF 定義的鍵
+                for (let low of detectedLow) {
+                    for (let high of detectedHigh) {
+                        const key = Object.keys(dtmfFrequencies).find(k => {
+                            return dtmfFrequencies[k][0] === low && dtmfFrequencies[k][1] === high;
+                        });
+                        if (key && !recognizedKeys.includes(key)) {
+                            recognizedKeys += key;
+                            document.getElementById('result').innerText = recognizedKeys;
+                        }
+                    }
+                }
+
+                requestAnimationFrame(process);
+            }
+
+            process();
+        }
+
+        /**
+         * 使用 Goertzel 演算法檢測特定頻率
+         * @param {Float32Array} signal - 音頻信號
+         * @param {number[]} frequencies - 要檢測的頻率列表
+         * @param {number} sampleRate - 采樣率
+         * @returns {number[]} - 檢測到的頻率列表
+         */
+        function goertzel(signal, frequencies, sampleRate) {
+            const detected = [];
+            const N = signal.length;
+
+            frequencies.forEach(freq => {
+                const k = Math.round(0.5 + ((N * freq) / sampleRate));
+                const omega = (2.0 * Math.PI * k) / N;
+                const sine = Math.sin(omega);
+                const cosine = Math.cos(omega);
+                const coeff = 2.0 * cosine;
+                let q0 = 0;
+                let q1 = 0;
+                let q2 = 0;
+
+                for (let sample of signal) {
+                    q0 = coeff * q1 - q2 + sample;
+                    q2 = q1;
+                    q1 = q0;
+                }
+
+                const magnitude = Math.sqrt(q1 * q1 + q2 * q2 - q1 * q2 * coeff);
+
+                // 設定一個門檻值，根據需要進行調整
+                const threshold = 0.05; // 這個值可能需要根據實際情況調整
+
+                if (magnitude > threshold) {
+                    detected.push(freq);
+                }
+            });
+
+            return detected;
+        }
+    </script>
+</body>
+</html>
