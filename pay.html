@@ -1,7 +1,6 @@
 <!DOCTYPE html>
 <html lang="zh-TW">
 <head>
-1
     <meta charset="UTF-8">
     <title>持續 DTMF 聲音辨識程式</title>
     <style>
@@ -29,19 +28,21 @@
             display: flex;
             flex-wrap: wrap;
             justify-content: center;
-            gap: 15px;
+            gap: 20px;
+            width: 100%;
+            max-width: 600px;
         }
 
         #startButton, #stopButton, #clearButton {
             padding: 20px 40px;
             font-size: 24px;
             cursor: pointer;
-            margin: 10px;
             border: none;
-            border-radius: 10px;
+            border-radius: 12px;
             color: white;
             transition: background-color 0.3s;
-            flex: 1 1 200px; /* 彈性寬度 */
+            flex: 1 1 180px; /* 彈性寬度 */
+            min-width: 150px;
         }
 
         #startButton {
@@ -77,7 +78,7 @@
             background-color: #fff;
             padding: 25px;
             border-radius: 10px;
-            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
         }
 
         #resultContainer h2 {
@@ -107,7 +108,7 @@
             #startButton, #stopButton, #clearButton {
                 padding: 15px 30px;
                 font-size: 20px;
-                flex: 1 1 150px;
+                flex: 1 1 140px;
             }
 
             #result {
@@ -153,9 +154,10 @@
         const LOW_FREQS = [697, 770, 852, 941];
         const HIGH_FREQS = [1209, 1336, 1477, 1633];
         const TOLERANCE = 15; // 誤差範圍（Hz）
-        const MIN_MAGNITUDE = -35; // 最小幅度閾值（分貝）調高以過濾噪音
+        const MIN_MAGNITUDE = -35; // 最小幅度閾值（分貝）
         const REQUIRED_CONSECUTIVE_DETECTIONS = 3; // 需要連續偵測多少次才能確認
         const ENERGY_THRESHOLD = 0.01; // RMS 能量閾值
+        const NO_AUDIO_TIMEOUT = 3000; // 3秒無音訊自動停止辨識
 
         const startButton = document.getElementById('startButton');
         const stopButton = document.getElementById('stopButton');
@@ -171,6 +173,8 @@
         let lastDetected = null;
         let detectionCooldown = false;
         let detectionCount = 0;
+        let lastAudioTime = null;
+        let autoStopTimeout = null;
 
         // Goertzel 演算法實作
         class Goertzel {
@@ -231,11 +235,25 @@
             clearButton.disabled = true;
             statusDiv.textContent = '狀態: 正在辨識...';
             resultDiv.textContent = ''; // 清空之前的結果
+            lastAudioTime = Date.now();
+
+            // 清除之前的 auto stop timeout
+            if (autoStopTimeout) {
+                clearTimeout(autoStopTimeout);
+            }
 
             try {
                 await initAudio();
                 setupGoertzel();
                 detectDTMF();
+
+                // 設置自動停止超時
+                autoStopTimeout = setTimeout(() => {
+                    if (isRunning) {
+                        stopRecognition();
+                        appendResult('(自動停止)');
+                    }
+                }, NO_AUDIO_TIMEOUT);
             } catch (err) {
                 console.error('無法存取麥克風:', err);
                 resultDiv.textContent = '無法存取麥克風。請確認權限。';
@@ -272,6 +290,12 @@
             // 重置 Goertzel
             goertzelLow.forEach(g => g.reset());
             goertzelHigh.forEach(g => g.reset());
+
+            // 清除 auto stop timeout
+            if (autoStopTimeout) {
+                clearTimeout(autoStopTimeout);
+                autoStopTimeout = null;
+            }
         }
 
         // 初始化 Goertzel 演算法
@@ -309,6 +333,22 @@
                 requestAnimationFrame(detectDTMF);
                 return;
             }
+
+            // 更新最後有音訊的時間
+            lastAudioTime = Date.now();
+
+            // 清除之前的 auto stop timeout
+            if (autoStopTimeout) {
+                clearTimeout(autoStopTimeout);
+            }
+
+            // 設置新的 auto stop timeout
+            autoStopTimeout = setTimeout(() => {
+                if (isRunning) {
+                    stopRecognition();
+                    appendResult('(自動停止)');
+                }
+            }, NO_AUDIO_TIMEOUT);
 
             // 進行 Goertzel 計算
             for (let i = 0; i < bufferSize; i++) {
@@ -367,12 +407,15 @@
             goertzelLow.forEach(g => g.reset());
             goertzelHigh.forEach(g => g.reset());
 
-            requestAnimationFrame(detectDTMF);
+            // 設定辨識間隔為400毫秒
+            setTimeout(() => {
+                detectDTMF();
+            }, 400);
         }
 
         // 顯示辨識結果
         function appendResult(dtmf) {
-            if (dtmf === '(結束)') {
+            if (dtmf === '(結束)' || dtmf === '(自動停止)') {
                 resultDiv.textContent += ` ${dtmf}`;
             } else {
                 resultDiv.textContent += dtmf;
@@ -385,6 +428,13 @@
             lastDetected = null;
             detectionCount = 0;
             detectionCooldown = false;
+            lastAudioTime = null;
+
+            // 清除 auto stop timeout
+            if (autoStopTimeout) {
+                clearTimeout(autoStopTimeout);
+                autoStopTimeout = null;
+            }
         }
 
         // 按鈕事件
