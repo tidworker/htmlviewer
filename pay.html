@@ -6,26 +6,119 @@
     <style>
         body {
             font-family: Arial, sans-serif;
-            margin: 20px;
+            margin: 10px;
+            padding: 0;
+            background-color: #f0f0f0;
+        }
+        h1 {
+            text-align: center;
+            color: #333;
         }
         .section {
-            margin-bottom: 30px;
+            margin-bottom: 20px;
+            padding: 15px;
+            background-color: #fff;
+            border-radius: 10px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+        .buttons {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 10px;
+            margin-top: 10px;
         }
         .buttons button {
-            margin: 5px;
-            padding: 10px 15px;
-            font-size: 16px;
+            flex: 1 1 40px;
+            padding: 15px;
+            font-size: 18px;
+            border: none;
+            border-radius: 5px;
+            background-color: #4CAF50;
+            color: white;
+            cursor: pointer;
+            transition: background-color 0.3s;
         }
-        #sendSection, #receiveSection {
-            border: 1px solid #ccc;
-            padding: 20px;
-            border-radius: 8px;
+        .buttons button:hover {
+            background-color: #45a049;
         }
         input[type="text"] {
-            width: 80%;
-            padding: 10px;
+            width: 100%;
+            padding: 12px;
             font-size: 16px;
-            margin-right: 10px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            box-sizing: border-box;
+            margin-bottom: 10px;
+        }
+        button.send-btn {
+            width: 100%;
+            padding: 15px;
+            font-size: 18px;
+            border: none;
+            border-radius: 5px;
+            background-color: #008CBA;
+            color: white;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+        button.send-btn:hover {
+            background-color: #007bb5;
+        }
+        .receive-buttons {
+            display: flex;
+            justify-content: space-between;
+            gap: 10px;
+            margin-top: 10px;
+        }
+        .receive-buttons button {
+            flex: 1;
+            padding: 15px;
+            font-size: 16px;
+            border: none;
+            border-radius: 5px;
+            background-color: #f44336;
+            color: white;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+        .receive-buttons button:hover {
+            background-color: #da190b;
+        }
+        #result {
+            display: block;
+            margin-top: 10px;
+            font-size: 18px;
+            color: #555;
+            text-align: center;
+        }
+        /* 監聽指示燈 */
+        .listening-indicator {
+            display: none;
+            margin-top: 10px;
+            text-align: center;
+            font-size: 16px;
+            color: #ff5722;
+        }
+        .listening-indicator.active {
+            display: block;
+        }
+        /* 響應式設計 */
+        @media (max-width: 600px) {
+            .buttons button, .receive-buttons button, .send-btn {
+                font-size: 16px;
+                padding: 12px;
+            }
+            input[type="text"] {
+                font-size: 14px;
+                padding: 10px;
+            }
+            #result {
+                font-size: 16px;
+            }
+            .listening-indicator {
+                font-size: 14px;
+            }
         }
     </style>
 </head>
@@ -36,14 +129,17 @@
     <div id="sendSection" class="section">
         <h2>發送訊息</h2>
         <input type="text" id="dtmfInput" placeholder="輸入 1234567890# 的字串">
-        <button onclick="sendDTMF()">發送</button>
+        <button class="send-btn" onclick="sendDTMF()">發送</button>
     </div>
 
     <!-- 接收訊息區域 -->
     <div id="receiveSection" class="section">
         <h2>接收訊息</h2>
-        <button onclick="startListening()">開始監聽</button>
-        <button onclick="stopListening()">停止監聽</button>
+        <div class="receive-buttons">
+            <button onclick="startListening()">開始監聽</button>
+            <button onclick="stopListening()">停止監聽</button>
+        </div>
+        <div class="listening-indicator" id="listeningIndicator">正在監聽...</div>
         <p>識別結果：<span id="result">尚未識別</span></p>
     </div>
 
@@ -95,7 +191,7 @@
                 oscillator1.start();
                 oscillator2.start();
 
-                const duration = 500; // 每個音符持續時間（毫秒），從200ms增至500ms
+                const duration = 400; // 每個音符持續時間（毫秒）
 
                 setTimeout(() => {
                     oscillator1.stop();
@@ -118,12 +214,22 @@
                 return;
             }
 
-            // 為了避免多次點擊發送時創建多個 AudioContext，先檢查是否已有正在運行的 AudioContext
+            // 禁用發送按鈕，防止重複點擊
+            const sendButton = document.querySelector('.send-btn');
+            sendButton.disabled = true;
+            sendButton.style.backgroundColor = '#ccc';
+            sendButton.style.cursor = 'not-allowed';
+
             for (let char of input) {
                 await playSingleDTMF(char, new (window.AudioContext || window.webkitAudioContext)());
-                // 在音符之間添加間隔，從100ms增至300ms
-                await new Promise(resolve => setTimeout(resolve, 300));
+                // 在音符之間添加間隔
+                await new Promise(resolve => setTimeout(resolve, 200));
             }
+
+            // 啟用發送按鈕
+            sendButton.disabled = false;
+            sendButton.style.backgroundColor = '#008CBA';
+            sendButton.style.cursor = 'pointer';
         }
 
         // DTMF 接收部分
@@ -149,10 +255,12 @@
                     isListening = true;
                     recognizedKeys = '';
                     document.getElementById('result').innerText = '尚未識別';
+                    document.getElementById('listeningIndicator').classList.add('active');
                     recognizeDTMF(analyser, buffer, sampleRate);
                 })
                 .catch(err => {
                     console.error('獲取麥克風失敗：', err);
+                    alert('無法獲取麥克風，請檢查權限設置。');
                 });
         }
 
@@ -161,6 +269,7 @@
             audioContext.close();
             isListening = false;
             document.getElementById('result').innerText = recognizedKeys || '尚未識別';
+            document.getElementById('listeningIndicator').classList.remove('active');
         }
 
         /**
@@ -206,7 +315,7 @@
                             recognizedKeys += key;
                             document.getElementById('result').innerText = recognizedKeys;
                             
-                            // 如果識別到 '#'，則自動停止監聽
+                            // 如果識別到 '#', 則自動停止監聽
                             if (key === '#') {
                                 stopListening();
                                 return;
