@@ -151,8 +151,9 @@
 
         const LOW_FREQS = [697, 770, 852, 941];
         const HIGH_FREQS = [1209, 1336, 1477, 1633];
-        const TOLERANCE = 20; // 誤差範圍（Hz）
-        const MIN_MAGNITUDE = -50; // 最小幅度閾值（分貝）
+        const TOLERANCE = 15; // 誤差範圍（Hz）調低以增加精確度
+        const MIN_MAGNITUDE = -40; // 最小幅度閾值（分貝）調高以過濾噪音
+        const REQUIRED_CONSECUTIVE_DETECTIONS = 3; // 需要連續偵測多少次才能確認
 
         const startButton = document.getElementById('startButton');
         const stopButton = document.getElementById('stopButton');
@@ -167,6 +168,7 @@
         let isRunning = false;
         let lastDetected = null;
         let detectionCooldown = false;
+        let detectionCount = 0;
 
         // Goertzel 演算法實作
         class Goertzel {
@@ -312,21 +314,34 @@
             const dtmf = findDTMF(detectedLow, detectedHigh);
             if (dtmf) {
                 // 防止重複偵測相同按鍵
-                if (dtmf !== lastDetected && !detectionCooldown) {
+                if (dtmf === lastDetected) {
+                    // 如果連續偵測到相同按鍵，增加計數
+                    detectionCount++;
+                } else {
+                    // 新的偵測，重置計數
                     lastDetected = dtmf;
-                    outputResult(dtmf);
+                    detectionCount = 1;
+                }
+
+                // 需要連續偵測到指定次數才確認
+                if (detectionCount >= REQUIRED_CONSECUTIVE_DETECTIONS && !detectionCooldown) {
+                    detectionCooldown = true;
+                    appendResult(dtmf);
                     // 如果偵測到 '#', 停止辨識
                     if (dtmf === '#') {
                         stopRecognition();
-                        outputResult('(結束)');
+                        appendResult('(結束)');
                     } else {
                         // 設定冷卻時間，避免重複偵測
-                        detectionCooldown = true;
                         setTimeout(() => {
                             detectionCooldown = false;
                         }, 1000); // 1秒冷卻
                     }
                 }
+            } else {
+                // 沒有偵測到有效 DTMF，重置計數
+                detectionCount = 0;
+                lastDetected = null;
             }
 
             // 重置 Goertzel
@@ -336,10 +351,10 @@
             requestAnimationFrame(detectDTMF);
         }
 
-        // 即時輸出辨識結果
-        function outputResult(dtmf) {
-            if (dtmf === '(結束)') {
-                resultDiv.textContent += ` ${dtmf}`;
+        // 顯示辨識結果
+        function appendResult(dtmf) {
+            if (resultDiv.textContent === '尚未辨識') {
+                resultDiv.textContent = dtmf;
             } else {
                 resultDiv.textContent += dtmf;
             }
@@ -349,6 +364,8 @@
         function clearResult() {
             resultDiv.textContent = '尚未辨識';
             lastDetected = null;
+            detectionCount = 0;
+            detectionCooldown = false;
         }
 
         // 按鈕事件
