@@ -29,15 +29,16 @@
             margin-top: 10px;
         }
         .buttons button {
-            flex: 1 1 40px;
+            flex: 1 1 30%;
             padding: 15px;
-            font-size: 18px;
+            font-size: 20px;
             border: none;
             border-radius: 5px;
             background-color: #4CAF50;
             color: white;
             cursor: pointer;
             transition: background-color 0.3s;
+            min-width: 60px;
         }
         .buttons button:hover {
             background-color: #45a049;
@@ -54,7 +55,7 @@
         button.send-btn {
             width: 100%;
             padding: 15px;
-            font-size: 18px;
+            font-size: 20px;
             border: none;
             border-radius: 5px;
             background-color: #008CBA;
@@ -106,7 +107,7 @@
         /* 響應式設計 */
         @media (max-width: 600px) {
             .buttons button, .receive-buttons button, .send-btn {
-                font-size: 16px;
+                font-size: 18px;
                 padding: 12px;
             }
             input[type="text"] {
@@ -314,7 +315,7 @@
                         if (key && !recognizedKeys.includes(key)) {
                             recognizedKeys += key;
                             document.getElementById('result').innerText = recognizedKeys;
-                            
+
                             // 如果識別到 '#', 則自動停止監聽
                             if (key === '#') {
                                 stopListening();
