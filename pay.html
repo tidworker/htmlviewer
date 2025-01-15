@@ -32,15 +32,15 @@
         }
 
         #startButton, #stopButton, #clearButton {
-            padding: 15px 30px;
-            font-size: 20px;
+            padding: 20px 40px;
+            font-size: 24px;
             cursor: pointer;
             margin: 10px;
             border: none;
-            border-radius: 8px;
+            border-radius: 10px;
             color: white;
             transition: background-color 0.3s;
-            flex: 1 1 150px; /* 彈性寬度 */
+            flex: 1 1 200px; /* 彈性寬度 */
         }
 
         #startButton {
@@ -85,7 +85,7 @@
         }
 
         #result {
-            font-size: 32px;
+            font-size: 36px;
             color: #007BFF;
             word-wrap: break-word;
             min-height: 60px;
@@ -97,16 +97,16 @@
         /* 狀態顯示 */
         #status {
             margin-top: 20px;
-            font-size: 18px;
+            font-size: 20px;
             color: #555;
         }
 
         /* 響應式設計 */
         @media (max-width: 600px) {
             #startButton, #stopButton, #clearButton {
-                padding: 15px 20px;
-                font-size: 18px;
-                flex: 1 1 120px;
+                padding: 15px 30px;
+                font-size: 20px;
+                flex: 1 1 150px;
             }
 
             #result {
@@ -168,6 +168,34 @@
         let lastDetected = null;
         let detectionCooldown = false;
 
+        // Goertzel 演算法實作
+        class Goertzel {
+            constructor(sampleRate, targetFreq, bufferSize) {
+                this.sampleRate = sampleRate;
+                this.targetFreq = targetFreq;
+                this.bufferSize = bufferSize;
+                this.k = Math.round(0.5 + ((bufferSize * targetFreq) / sampleRate));
+                this.omega = (2.0 * Math.PI * this.k) / bufferSize;
+                this.coeff = 2.0 * Math.cos(this.omega);
+                this.reset();
+            }
+
+            reset() {
+                this.s_prev = 0;
+                this.s_prev2 = 0;
+            }
+
+            process(sample) {
+                const s = sample + this.coeff * this.s_prev - this.s_prev2;
+                this.s_prev2 = this.s_prev;
+                this.s_prev = s;
+            }
+
+            get magnitudeSquared() {
+                return this.s_prev2 * this.s_prev2 + this.s_prev * this.s_prev - this.coeff * this.s_prev * this.s_prev2;
+            }
+        }
+
         // 反向查找 DTMF 符號
         function findDTMF(low, high) {
             for (const [key, freqs] of Object.entries(DTMF_FREQS)) {
@@ -177,34 +205,6 @@
                 }
             }
             return null;
-        }
-
-        // 計算頻譜峰值
-        function getPeaks(frequencyData, sampleRate, fftSize) {
-            const magnitudes = [];
-            const freqs = [];
-            for (let i = 0; i < frequencyData.length; i++) {
-                const magnitude = frequencyData[i];
-                if (magnitude > MIN_MAGNITUDE) { // 設定幅度閾值
-                    const freq = i * sampleRate / fftSize;
-                    freqs.push(freq);
-                    magnitudes.push(magnitude);
-                }
-            }
-
-            let max1 = { freq: 0, mag: 0 };
-            let max2 = { freq: 0, mag: 0 };
-
-            for (let i = 0; i < freqs.length; i++) {
-                if (magnitudes[i] > max1.mag) {
-                    max2 = max1;
-                    max1 = { freq: freqs[i], mag: magnitudes[i] };
-                } else if (magnitudes[i] > max2.mag) {
-                    max2 = { freq: freqs[i], mag: magnitudes[i] };
-                }
-            }
-
-            return [max1.freq, max2.freq];
         }
 
         // 初始化音訊
@@ -226,9 +226,11 @@
             stopButton.disabled = false;
             clearButton.disabled = true;
             statusDiv.textContent = '狀態: 正在辨識...';
+            resultDiv.textContent = ''; // 清空之前的結果
 
             try {
                 await initAudio();
+                setupGoertzel();
                 detectDTMF();
             } catch (err) {
                 console.error('無法存取麥克風:', err);
@@ -262,47 +264,85 @@
                 audioContext.close();
                 audioContext = null;
             }
+
+            // 重置 Goertzel
+            goertzelLow.forEach(g => g.reset());
+            goertzelHigh.forEach(g => g.reset());
+        }
+
+        // 初始化 Goertzel 演算法
+        let goertzelLow = [];
+        let goertzelHigh = [];
+
+        function setupGoertzel() {
+            const bufferSize = 2048;
+            const sampleRate = audioContext.sampleRate;
+
+            goertzelLow = LOW_FREQS.map(freq => new Goertzel(sampleRate, freq, bufferSize));
+            goertzelHigh = HIGH_FREQS.map(freq => new Goertzel(sampleRate, freq, bufferSize));
         }
 
         // DTMF 辨識主函數
         function detectDTMF() {
             if (!isRunning) return;
 
-            analyser.getFloatFrequencyData(dataArray);
-            const sampleRate = audioContext.sampleRate;
-            const fftSize = analyser.fftSize;
+            analyser.getFloatTimeDomainData(dataArray);
+            const bufferSize = analyser.fftSize;
 
-            const peaks = getPeaks(dataArray, sampleRate, fftSize);
-            if (peaks.length >= 2) {
-                const lowFreq = Math.min(...peaks);
-                const highFreq = Math.max(...peaks);
-                const dtmf = findDTMF(lowFreq, highFreq);
-                if (dtmf) {
-                    // 防止重複偵測相同按鍵
-                    if (dtmf !== lastDetected && !detectionCooldown) {
-                        lastDetected = dtmf;
-                        outputResult(dtmf);
-                        // 如果偵測到 '#', 停止辨識
-                        if (dtmf === '#') {
-                            stopRecognition();
-                            outputResult('(結束)');
-                        } else {
-                            // 設定冷卻時間，避免重複偵測
-                            detectionCooldown = true;
-                            setTimeout(() => {
-                                detectionCooldown = false;
-                            }, 1000); // 1秒冷卻
-                        }
+            // 進行 Goertzel 計算
+            for (let i = 0; i < bufferSize; i++) {
+                const sample = dataArray[i];
+                goertzelLow.forEach(g => g.process(sample));
+                goertzelHigh.forEach(g => g.process(sample));
+            }
+
+            // 計算幅度
+            const magnitudesLow = goertzelLow.map(g => g.magnitudeSquared);
+            const magnitudesHigh = goertzelHigh.map(g => g.magnitudeSquared);
+
+            // 找出最大幅度的低頻和高頻
+            const maxLowMag = Math.max(...magnitudesLow);
+            const maxHighMag = Math.max(...magnitudesHigh);
+            const lowIndex = magnitudesLow.indexOf(maxLowMag);
+            const highIndex = magnitudesHigh.indexOf(maxHighMag);
+
+            const detectedLow = LOW_FREQS[lowIndex];
+            const detectedHigh = HIGH_FREQS[highIndex];
+
+            const dtmf = findDTMF(detectedLow, detectedHigh);
+            if (dtmf) {
+                // 防止重複偵測相同按鍵
+                if (dtmf !== lastDetected && !detectionCooldown) {
+                    lastDetected = dtmf;
+                    outputResult(dtmf);
+                    // 如果偵測到 '#', 停止辨識
+                    if (dtmf === '#') {
+                        stopRecognition();
+                        outputResult('(結束)');
+                    } else {
+                        // 設定冷卻時間，避免重複偵測
+                        detectionCooldown = true;
+                        setTimeout(() => {
+                            detectionCooldown = false;
+                        }, 1000); // 1秒冷卻
                     }
                 }
             }
+
+            // 重置 Goertzel
+            goertzelLow.forEach(g => g.reset());
+            goertzelHigh.forEach(g => g.reset());
 
             requestAnimationFrame(detectDTMF);
         }
 
         // 即時輸出辨識結果
         function outputResult(dtmf) {
-            resultDiv.textContent = dtmf; // 直接顯示當前偵測到的字符
+            if (dtmf === '(結束)') {
+                resultDiv.textContent += ` ${dtmf}`;
+            } else {
+                resultDiv.textContent += dtmf;
+            }
         }
 
         // 清除結果
