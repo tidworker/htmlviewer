@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html lang="zh-TW">
 <head>
+1
     <meta charset="UTF-8">
     <title>持續 DTMF 聲音辨識程式</title>
     <style>
@@ -151,9 +152,10 @@
 
         const LOW_FREQS = [697, 770, 852, 941];
         const HIGH_FREQS = [1209, 1336, 1477, 1633];
-        const TOLERANCE = 15; // 誤差範圍（Hz）調低以增加精確度
-        const MIN_MAGNITUDE = -40; // 最小幅度閾值（分貝）調高以過濾噪音
+        const TOLERANCE = 15; // 誤差範圍（Hz）
+        const MIN_MAGNITUDE = -35; // 最小幅度閾值（分貝）調高以過濾噪音
         const REQUIRED_CONSECUTIVE_DETECTIONS = 3; // 需要連續偵測多少次才能確認
+        const ENERGY_THRESHOLD = 0.01; // RMS 能量閾值
 
         const startButton = document.getElementById('startButton');
         const stopButton = document.getElementById('stopButton');
@@ -284,12 +286,29 @@
             goertzelHigh = HIGH_FREQS.map(freq => new Goertzel(sampleRate, freq, bufferSize));
         }
 
+        // 計算音訊樣本的 RMS 能量
+        function calculateRMS(samples) {
+            let sumSquares = 0;
+            for (let i = 0; i < samples.length; i++) {
+                sumSquares += samples[i] * samples[i];
+            }
+            return Math.sqrt(sumSquares / samples.length);
+        }
+
         // DTMF 辨識主函數
         function detectDTMF() {
             if (!isRunning) return;
 
             analyser.getFloatTimeDomainData(dataArray);
             const bufferSize = analyser.fftSize;
+
+            // 計算 RMS 能量
+            const rms = calculateRMS(dataArray);
+            if (rms < ENERGY_THRESHOLD) {
+                // 能量過低，可能是無音訊，跳過辨識
+                requestAnimationFrame(detectDTMF);
+                return;
+            }
 
             // 進行 Goertzel 計算
             for (let i = 0; i < bufferSize; i++) {
@@ -353,8 +372,8 @@
 
         // 顯示辨識結果
         function appendResult(dtmf) {
-            if (resultDiv.textContent === '尚未辨識') {
-                resultDiv.textContent = dtmf;
+            if (dtmf === '(結束)') {
+                resultDiv.textContent += ` ${dtmf}`;
             } else {
                 resultDiv.textContent += dtmf;
             }
