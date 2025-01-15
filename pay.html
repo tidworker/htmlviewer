@@ -2,45 +2,89 @@
 <html lang="zh-TW">
 <head>
     <meta charset="UTF-8">
-    <title>DTMF 聲音辨識程式</title>
+    <title>持續 DTMF 聲音辨識程式</title>
     <style>
         body {
             font-family: Arial, sans-serif;
             text-align: center;
-            margin-top: 50px;
+            margin: 0;
+            padding: 50px;
             background-color: #f0f0f0;
         }
-        #startButton {
+        h1 {
+            color: #333;
+        }
+        #controls {
+            margin-top: 30px;
+        }
+        #startButton, #stopButton, #clearButton {
             padding: 15px 30px;
             font-size: 18px;
             cursor: pointer;
-            background-color: #4CAF50;
-            color: white;
+            margin: 10px;
             border: none;
             border-radius: 5px;
+            color: white;
+            transition: background-color 0.2s;
+        }
+        #startButton {
+            background-color: #4CAF50;
         }
         #startButton:hover {
             background-color: #45a049;
         }
-        #result {
-            margin-top: 30px;
-            font-size: 32px;
+        #stopButton {
+            background-color: #f44336;
+        }
+        #stopButton:hover {
+            background-color: #da190b;
+        }
+        #clearButton {
+            background-color: #555555;
+        }
+        #clearButton:hover {
+            background-color: #333333;
+        }
+        #resultContainer {
+            margin-top: 40px;
+            text-align: left;
+            display: inline-block;
+            max-width: 600px;
+            width: 100%;
+            background-color: #fff;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+        }
+        #resultContainer h2 {
+            margin-top: 0;
             color: #333;
         }
-        #instructions {
+        #result {
+            font-size: 24px;
+            color: #007BFF;
+            word-wrap: break-word;
+            min-height: 50px;
+        }
+        #status {
             margin-top: 20px;
-            font-size: 16px;
+            font-size: 18px;
             color: #555;
         }
     </style>
 </head>
 <body>
-    <h1>DTMF 聲音辨識程式</h1>
-    <button id="startButton">開始辨識</button>
-    <div id="result">尚未辨識</div>
-    <div id="instructions">
-        <p>請按下按鈕並發出 DTMF 音（如電話鍵盤上的數字）以進行辨識。</p>
+    <h1>持續 DTMF 聲音辨識程式</h1>
+    <div id="controls">
+        <button id="startButton">開始辨識</button>
+        <button id="stopButton" disabled>停止辨識</button>
+        <button id="clearButton">清除結果</button>
     </div>
+    <div id="resultContainer">
+        <h2>辨識結果:</h2>
+        <div id="result">尚未辨識</div>
+    </div>
+    <div id="status">狀態: 未開始</div>
 
     <script>
         // DTMF 頻率表
@@ -65,153 +109,166 @@
 
         const LOW_FREQS = [697, 770, 852, 941];
         const HIGH_FREQS = [1209, 1336, 1477, 1633];
-
-        const tolerance = 20; // 誤差範圍（Hz）
+        const TOLERANCE = 20; // 誤差範圍（Hz）
+        const MIN_MAGNITUDE = -50; // 最小幅度閾值（分貝）
 
         const startButton = document.getElementById('startButton');
+        const stopButton = document.getElementById('stopButton');
+        const clearButton = document.getElementById('clearButton');
         const resultDiv = document.getElementById('result');
+        const statusDiv = document.getElementById('status');
 
         let audioContext;
+        let analyser;
         let microphone;
-        let scriptNode;
+        let dataArray;
         let isRunning = false;
+        let lastDetected = null;
+        let detectionCooldown = false;
 
-        // Goertzel 演算法實作
-        class Goertzel {
-            constructor(sampleRate, targetFreq, bufferSize) {
-                this.sampleRate = sampleRate;
-                this.targetFreq = targetFreq;
-                this.bufferSize = bufferSize;
-                this.k = Math.round(0.5 + ((bufferSize * targetFreq) / sampleRate));
-                this.omega = (2.0 * Math.PI * this.k) / bufferSize;
-                this.coeff = 2.0 * Math.cos(this.omega);
-                this.reset();
-            }
-
-            reset() {
-                this.s_prev = 0;
-                this.s_prev2 = 0;
-            }
-
-            process(sample) {
-                const s = sample + this.coeff * this.s_prev - this.s_prev2;
-                this.s_prev2 = this.s_prev;
-                this.s_prev = s;
-            }
-
-            get magnitude() {
-                return Math.sqrt(this.s_prev2 * this.s_prev2 + this.s_prev * this.s_prev - this.coeff * this.s_prev * this.s_prev2);
-            }
-        }
-
-        async function initAudio() {
-            audioContext = new (window.AudioContext || window.webkitAudioContext)();
-            const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-            microphone = audioContext.createMediaStreamSource(stream);
-            scriptNode = audioContext.createScriptProcessor(4096, 1, 1);
-            microphone.connect(scriptNode);
-            scriptNode.connect(audioContext.destination);
-        }
-
-        function startRecognition() {
-            if (isRunning) return;
-            isRunning = true;
-            startButton.textContent = '停止辨識';
-            resultDiv.textContent = '正在辨識...';
-
-            initAudio().then(() => {
-                const bufferSize = 2048;
-                const sampleRate = audioContext.sampleRate;
-
-                // 初始化 Goertzel 演算法
-                const goertzelLow = LOW_FREQS.map(freq => new Goertzel(sampleRate, freq, bufferSize));
-                const goertzelHigh = HIGH_FREQS.map(freq => new Goertzel(sampleRate, freq, bufferSize));
-
-                let buffer = [];
-
-                scriptNode.onaudioprocess = function(audioProcessingEvent) {
-                    const inputBuffer = audioProcessingEvent.inputBuffer;
-                    const inputData = inputBuffer.getChannelData(0);
-
-                    for (let i = 0; i < inputData.length; i++) {
-                        buffer.push(inputData[i]);
-                        if (buffer.length === bufferSize) {
-                            // 將 buffer 資料傳遞給 Goertzel
-                            goertzelLow.forEach(goertzel => goertzel.process(buffer[i]));
-                            goertzelHigh.forEach(goertzel => goertzel.process(buffer[i]));
-
-                            buffer = [];
-
-                            // 計算幅度
-                            const lowMagnitudes = goertzelLow.map(g => g.magnitude);
-                            const highMagnitudes = goertzelHigh.map(g => g.magnitude);
-
-                            // 找出最大幅度的低頻和高頻
-                            const maxLow = Math.max(...lowMagnitudes);
-                            const maxHigh = Math.max(...highMagnitudes);
-                            const lowIndex = lowMagnitudes.indexOf(maxLow);
-                            const highIndex = highMagnitudes.indexOf(maxHigh);
-
-                            const detectedLow = LOW_FREQS[lowIndex];
-                            const detectedHigh = HIGH_FREQS[highIndex];
-
-                            // 檢查是否在容許範圍內
-                            const matchedKey = findDTMF(detectedLow, detectedHigh);
-                            if (matchedKey) {
-                                resultDiv.textContent = `辨識結果: ${matchedKey}`;
-                                stopRecognition();
-                            }
-
-                            // 重置 Goertzel
-                            goertzelLow.forEach(g => g.reset());
-                            goertzelHigh.forEach(g => g.reset());
-                        }
-                    }
-                };
-            }).catch(err => {
-                console.error('無法存取麥克風:', err);
-                resultDiv.textContent = '無法存取麥克風。請確認權限。';
-                isRunning = false;
-                startButton.textContent = '開始辨識';
-            });
-        }
-
-        function stopRecognition() {
-            if (!isRunning) return;
-            isRunning = false;
-            startButton.textContent = '開始辨識';
-            resultDiv.textContent = '辨識已停止';
-
-            if (scriptNode) {
-                scriptNode.disconnect();
-                scriptNode.onaudioprocess = null;
-            }
-            if (microphone) {
-                microphone.disconnect();
-            }
-            if (audioContext) {
-                audioContext.close();
-            }
-        }
-
+        // 反向查找 DTMF 符號
         function findDTMF(low, high) {
             for (const [key, freqs] of Object.entries(DTMF_FREQS)) {
                 const [lowFreq, highFreq] = freqs;
-                if (Math.abs(low - lowFreq) <= tolerance && Math.abs(high - highFreq) <= tolerance) {
+                if (Math.abs(low - lowFreq) <= TOLERANCE && Math.abs(high - highFreq) <= TOLERANCE) {
                     return key;
                 }
             }
             return null;
         }
 
-        // 按鈕事件
-        startButton.addEventListener('click', () => {
-            if (isRunning) {
-                stopRecognition();
-            } else {
-                startRecognition();
+        // 計算頻譜峰值
+        function getPeaks(frequencyData, sampleRate, fftSize) {
+            const magnitudes = [];
+            const freqs = [];
+            for (let i = 0; i < frequencyData.length; i++) {
+                const magnitude = frequencyData[i];
+                if (magnitude > MIN_MAGNITUDE) { // 設定幅度閾值
+                    const freq = i * sampleRate / fftSize;
+                    freqs.push(freq);
+                    magnitudes.push(magnitude);
+                }
             }
-        });
+
+            let max1 = { freq: 0, mag: 0 };
+            let max2 = { freq: 0, mag: 0 };
+
+            for (let i = 0; i < freqs.length; i++) {
+                if (magnitudes[i] > max1.mag) {
+                    max2 = max1;
+                    max1 = { freq: freqs[i], mag: magnitudes[i] };
+                } else if (magnitudes[i] > max2.mag) {
+                    max2 = { freq: freqs[i], mag: magnitudes[i] };
+                }
+            }
+
+            return [max1.freq, max2.freq];
+        }
+
+        // 初始化音訊
+        async function initAudio() {
+            audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            analyser = audioContext.createAnalyser();
+            analyser.fftSize = 2048;
+            const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+            microphone = audioContext.createMediaStreamSource(stream);
+            microphone.connect(analyser);
+            dataArray = new Float32Array(analyser.fftSize);
+        }
+
+        // 開始辨識
+        async function startRecognition() {
+            if (isRunning) return;
+            isRunning = true;
+            startButton.disabled = true;
+            stopButton.disabled = false;
+            clearButton.disabled = true;
+            statusDiv.textContent = '狀態: 正在辨識...';
+
+            await initAudio();
+            detectDTMF();
+        }
+
+        // 停止辨識
+        function stopRecognition() {
+            if (!isRunning) return;
+            isRunning = false;
+            startButton.disabled = false;
+            stopButton.disabled = true;
+            clearButton.disabled = false;
+            statusDiv.textContent = '狀態: 停止辨識';
+
+            if (microphone) {
+                microphone.disconnect();
+            }
+            if (analyser) {
+                analyser.disconnect();
+            }
+            if (audioContext) {
+                audioContext.close();
+            }
+        }
+
+        // DTMF 辨識主函數
+        function detectDTMF() {
+            if (!isRunning) return;
+
+            analyser.getFloatFrequencyData(dataArray);
+            const sampleRate = audioContext.sampleRate;
+            const fftSize = analyser.fftSize;
+
+            const peaks = getPeaks(dataArray, sampleRate, fftSize);
+            if (peaks.length >= 2) {
+                const lowFreq = Math.min(...peaks);
+                const highFreq = Math.max(...peaks);
+                const dtmf = findDTMF(lowFreq, highFreq);
+                if (dtmf) {
+                    // 防止重複偵測相同按鍵
+                    if (dtmf !== lastDetected && !detectionCooldown) {
+                        lastDetected = dtmf;
+                        appendResult(dtmf);
+                        // 如果偵測到 '#', 停止辨識
+                        if (dtmf === '#') {
+                            stopRecognition();
+                            appendResult('(結束)');
+                        } else {
+                            // 設定冷卻時間，避免重複偵測
+                            detectionCooldown = true;
+                            setTimeout(() => {
+                                detectionCooldown = false;
+                            }, 1000); // 1秒冷卻
+                        }
+                    }
+                }
+            }
+
+            requestAnimationFrame(detectDTMF);
+        }
+
+        // 顯示辨識結果
+        function appendResult(dtmf) {
+            if (resultDiv.textContent === '尚未辨識') {
+                resultDiv.textContent = dtmf;
+            } else {
+                resultDiv.textContent += dtmf;
+            }
+        }
+
+        // 清除結果
+        function clearResult() {
+            resultDiv.textContent = '尚未辨識';
+            lastDetected = null;
+        }
+
+        // 按鈕事件
+        startButton.addEventListener('click', startRecognition);
+        stopButton.addEventListener('click', stopRecognition);
+        clearButton.addEventListener('click', clearResult);
+
+        // 提示使用 HTTPS
+        if (location.protocol !== 'https:' && location.hostname !== 'localhost') {
+            alert('為了使用麥克風，請透過 HTTPS 協議訪問此頁面。');
+        }
     </script>
 </body>
 </html>
