@@ -2,167 +2,219 @@
 <html lang="zh-TW">
 <head>
     <meta charset="UTF-8">
-    <title>QR Code 生成與讀取系統</title>
+    <title>DTMF 通信系統</title>
     <style>
         body {
             font-family: Arial, sans-serif;
-            margin: 40px;
-            background-color: #f5f5f5;
-        }
-        h1 {
-            text-align: center;
+            margin: 20px;
         }
         .section {
-            background-color: #fff;
+            margin-bottom: 30px;
+        }
+        .buttons button {
+            margin: 5px;
+            padding: 10px 15px;
+            font-size: 16px;
+        }
+        #sendSection, #receiveSection {
+            border: 1px solid #ccc;
             padding: 20px;
-            margin-bottom: 40px;
             border-radius: 8px;
-            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
-        }
-        #qrcode {
-            margin-top: 20px;
-            text-align: center;
-        }
-        #reader {
-            width: 100%;
-            max-width: 500px;
-            margin: 0 auto;
-            display: none; /* 初始隱藏 */
         }
         input[type="text"] {
-            width: 100%;
+            width: 80%;
             padding: 10px;
             font-size: 16px;
-            margin-top: 10px;
-            box-sizing: border-box;
-        }
-        button {
-            padding: 10px 20px;
-            font-size: 16px;
-            margin-top: 10px;
-            cursor: pointer;
-        }
-        #scan-result {
-            margin-top: 20px;
-            font-size: 18px;
-            text-align: center;
-            word-break: break-all;
-        }
-        .button-group {
-            text-align: center;
-            margin-top: 20px;
+            margin-right: 10px;
         }
     </style>
-    <!-- 引入 QRCode.js -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
-    <!-- 引入 html5-qrcode -->
-    <script src="https://unpkg.com/html5-qrcode@2.3.7/minified/html5-qrcode.min.js"></script>
 </head>
 <body>
+    <h1>DTMF 通信系統</h1>
 
-    <h1>QR Code 生成與讀取系統</h1>
-
-    <!-- QR Code 生成區 -->
-    <div class="section">
-        <h2>生成 QR Code</h2>
-        <input type="text" id="qr-input" placeholder="輸入內容（僅限 0-9, +, #）">
-        <button onclick="generateQRCode()">生成 QR Code</button>
-        <div id="qrcode"></div>
+    <!-- 發送訊息區域 -->
+    <div id="sendSection" class="section">
+        <h2>發送訊息</h2>
+        <input type="text" id="dtmfInput" placeholder="輸入 1234567890# 的字串">
+        <button onclick="sendDTMF()">發送</button>
     </div>
 
-    <!-- QR Code 讀取區 -->
-    <div class="section">
-        <h2>讀取 QR Code</h2>
-        <div id="reader"></div>
-        <div id="scan-result">等待掃描...</div>
-        <div class="button-group">
-            <button onclick="startScanner()">開始掃描</button>
-            <button onclick="stopScanner()">停止掃描</button>
-        </div>
+    <!-- 接收訊息區域 -->
+    <div id="receiveSection" class="section">
+        <h2>接收訊息</h2>
+        <button onclick="startListening()">開始監聽</button>
+        <button onclick="stopListening()">停止監聽</button>
+        <p>識別結果：<span id="result">尚未識別</span></p>
     </div>
 
     <script>
-        // 生成 QR Code
-        function generateQRCode() {
-            const input = document.getElementById('qr-input').value.trim();
-            const pattern = /^[0-9+#]+$/;
+        // DTMF 頻率定義
+        const dtmfFrequencies = {
+            '1': [697, 1209],
+            '2': [697, 1336],
+            '3': [697, 1477],
+            '4': [770, 1209],
+            '5': [770, 1336],
+            '6': [770, 1477],
+            '7': [852, 1209],
+            '8': [852, 1336],
+            '9': [852, 1477],
+            '0': [941, 1336],
+            '#': [941, 1477]
+        };
 
-            if (!pattern.test(input)) {
-                alert('輸入內容僅限數字 0-9、+ 和 #');
+        /**
+         * 生成並播放單個 DTMF 音符
+         * @param {string} key - 要播放的鍵
+         * @param {AudioContext} audioCtx - 音頻上下文
+         * @returns {Promise} - 播放完成的 Promise
+         */
+        function playSingleDTMF(key, audioCtx) {
+            return new Promise((resolve, reject) => {
+                const frequencies = dtmfFrequencies[key];
+                if (!frequencies) {
+                    alert(`無效的按鍵: ${key}`);
+                    resolve();
+                    return;
+                }
+
+                const oscillator1 = audioCtx.createOscillator();
+                const oscillator2 = audioCtx.createOscillator();
+                const gainNode = audioCtx.createGain();
+
+                oscillator1.frequency.value = frequencies[0];
+                oscillator2.frequency.value = frequencies[1];
+
+                oscillator1.type = 'sine';
+                oscillator2.type = 'sine';
+
+                oscillator1.connect(gainNode);
+                oscillator2.connect(gainNode);
+                gainNode.connect(audioCtx.destination);
+
+                oscillator1.start();
+                oscillator2.start();
+
+                const duration = 200; // 每個音符持續時間（毫秒）
+
+                setTimeout(() => {
+                    oscillator1.stop();
+                    oscillator2.stop();
+                    audioCtx.close();
+                    resolve();
+                }, duration);
+            });
+        }
+
+        /**
+         * 發送一串 DTMF 音符
+         */
+        async function sendDTMF() {
+            const input = document.getElementById('dtmfInput').value.trim();
+            const validKeys = /^[0-9#]+$/;
+
+            if (!validKeys.test(input)) {
+                alert('請輸入有效的字串，只能包含 1234567890#');
                 return;
             }
 
-            // 清除之前的 QR Code
-            document.getElementById('qrcode').innerHTML = "";
-
-            // 生成新的 QR Code
-            new QRCode(document.getElementById("qrcode"), {
-                text: input,
-                width: 256,
-                height: 256,
-                colorDark : "#000000",
-                colorLight : "#ffffff",
-                correctLevel : QRCode.CorrectLevel.H
-            });
-        }
-
-        // 讀取 QR Code
-        let html5QrcodeScanner;
-
-        function onScanSuccess(decodedText, decodedResult) {
-            // 處理掃描結果
-            document.getElementById('scan-result').innerText = `掃描結果: ${decodedText}`;
-            // 停止掃描
-            stopScanner();
-        }
-
-        function onScanFailure(error) {
-            // 可選：處理掃描失敗的情況
-            console.warn(`掃描失敗：${error}`);
-        }
-
-        function startScanner() {
-            if (!html5QrcodeScanner) {
-                html5QrcodeScanner = new Html5Qrcode("reader");
+            // 為了避免多次點擊發送時創建多個 AudioContext，先檢查是否已有正在運行的 AudioContext
+            for (let char of input) {
+                await playSingleDTMF(char, new (window.AudioContext || window.webkitAudioContext)());
+                // 在音符之間添加間隔
+                await new Promise(resolve => setTimeout(resolve, 100));
             }
-
-            const config = { fps: 10, qrbox: 250 };
-
-            // 顯示讀取區域
-            document.getElementById('reader').style.display = 'block';
-
-            html5QrcodeScanner.start(
-                { facingMode: "environment" },
-                config,
-                onScanSuccess,
-                onScanFailure
-            ).catch(err => {
-                console.error('無法啟動掃描器：', err);
-                alert('無法啟動掃描器，請確保已授權攝影機權限並有可用的攝影機。');
-                // 隱藏讀取區域
-                document.getElementById('reader').style.display = 'none';
-            });
         }
 
-        function stopScanner() {
-            if (html5QrcodeScanner) {
-                html5QrcodeScanner.stop().then(ignore => {
-                    html5QrcodeScanner.clear();
-                    html5QrcodeScanner = null;
-                    // 隱藏讀取區域
-                    document.getElementById('reader').style.display = 'none';
-                }).catch(err => {
-                    console.error('停止掃描時出錯：', err);
-                    alert('停止掃描時出錯，請重試。');
+        // DTMF 接收部分
+        let audioContext;
+        let analyser;
+        let microphone;
+        let dataArray;
+        let isListening = false;
+        let recognizedKeys = '';
+
+        function startListening() {
+            if (isListening) return;
+
+            navigator.mediaDevices.getUserMedia({ audio: true })
+                .then(stream => {
+                    audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                    analyser = audioContext.createAnalyser();
+                    microphone = audioContext.createMediaStreamSource(stream);
+                    microphone.connect(analyser);
+                    analyser.fftSize = 2048;
+                    const bufferLength = analyser.frequencyBinCount;
+                    dataArray = new Uint8Array(bufferLength);
+                    isListening = true;
+                    recognizedKeys = '';
+                    document.getElementById('result').innerText = '尚未識別';
+                    recognizeDTMF();
+                })
+                .catch(err => {
+                    console.error('獲取麥克風失敗：', err);
                 });
-            }
         }
 
-        // 可選：自動啟動掃描器（若不需要可移除）
-        // window.addEventListener('load', () => {
-        //     startScanner();
-        // });
-    </script>
+        function stopListening() {
+            if (!isListening) return;
+            audioContext.close();
+            isListening = false;
+            document.getElementById('result').innerText = recognizedKeys || '尚未識別';
+        }
 
+        function recognizeDTMF() {
+            if (!isListening) return;
+
+            analyser.getByteFrequencyData(dataArray);
+
+            const frequencies = getDominantFrequencies(dataArray, audioContext.sampleRate, analyser.fftSize);
+            const detectedKey = matchDTMF(frequencies);
+
+            if (detectedKey) {
+                // 避免重複添加相同鍵
+                if (!recognizedKeys.endsWith(detectedKey)) {
+                    recognizedKeys += detectedKey;
+                    document.getElementById('result').innerText = recognizedKeys;
+                }
+            }
+
+            requestAnimationFrame(recognizeDTMF);
+        }
+
+        /**
+         * 從頻譜數據中提取出強度較高的頻率
+         * @param {Uint8Array} data - 頻譜數據
+         * @param {number} sampleRate - 采樣率
+         * @param {number} fftSize - FFT 大小
+         * @returns {number[]} - 主要頻率
+         */
+        function getDominantFrequencies(data, sampleRate, fftSize) {
+            const frequencies = [];
+            for (let i = 0; i < data.length; i++) {
+                if (data[i] > 200) { // 閾值，可根據實際情況調整
+                    const freq = i * sampleRate / fftSize;
+                    frequencies.push(freq);
+                }
+            }
+            return frequencies;
+        }
+
+        /**
+         * 將檢測到的頻率與 DTMF 頻率進行匹配
+         * @param {number[]} frequencies - 檢測到的頻率
+         * @returns {string|null} - 檢測到的鍵或 null
+         */
+        function matchDTMF(frequencies) {
+            for (const [key, [low, high]] of Object.entries(dtmfFrequencies)) {
+                const lowFound = frequencies.some(freq => Math.abs(freq - low) < 10);
+                const highFound = frequencies.some(freq => Math.abs(freq - high) < 10);
+                if (lowFound && highFound) {
+                    return key;
+                }
+            }
+            return null;
+        }
+    </script>
 </body>
 </html>
