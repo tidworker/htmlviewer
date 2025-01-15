@@ -4,72 +4,114 @@
     <meta charset="UTF-8">
     <title>持續 DTMF 聲音辨識程式</title>
     <style>
+        /* 基本樣式 */
         body {
             font-family: Arial, sans-serif;
             text-align: center;
             margin: 0;
-            padding: 50px;
+            padding: 20px;
             background-color: #f0f0f0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
         }
+
         h1 {
             color: #333;
+            margin-bottom: 20px;
         }
+
+        /* 控制按鈕樣式 */
         #controls {
-            margin-top: 30px;
+            margin-top: 20px;
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 15px;
         }
+
         #startButton, #stopButton, #clearButton {
             padding: 15px 30px;
-            font-size: 18px;
+            font-size: 20px;
             cursor: pointer;
             margin: 10px;
             border: none;
-            border-radius: 5px;
+            border-radius: 8px;
             color: white;
-            transition: background-color 0.2s;
+            transition: background-color 0.3s;
+            flex: 1 1 150px; /* 彈性寬度 */
         }
+
         #startButton {
             background-color: #4CAF50;
         }
+
         #startButton:hover {
             background-color: #45a049;
         }
+
         #stopButton {
             background-color: #f44336;
         }
+
         #stopButton:hover {
             background-color: #da190b;
         }
+
         #clearButton {
             background-color: #555555;
         }
+
         #clearButton:hover {
             background-color: #333333;
         }
+
+        /* 結果顯示區域 */
         #resultContainer {
-            margin-top: 40px;
-            text-align: left;
-            display: inline-block;
-            max-width: 600px;
+            margin-top: 30px;
+            text-align: center;
             width: 100%;
+            max-width: 600px;
             background-color: #fff;
-            padding: 20px;
+            padding: 25px;
             border-radius: 10px;
-            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
         }
+
         #resultContainer h2 {
             margin-top: 0;
             color: #333;
         }
+
         #result {
-            font-size: 24px;
+            font-size: 32px;
             color: #007BFF;
             word-wrap: break-word;
-            min-height: 50px;
+            min-height: 60px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
         }
+
+        /* 狀態顯示 */
         #status {
             margin-top: 20px;
             font-size: 18px;
             color: #555;
+        }
+
+        /* 響應式設計 */
+        @media (max-width: 600px) {
+            #startButton, #stopButton, #clearButton {
+                padding: 15px 20px;
+                font-size: 18px;
+                flex: 1 1 120px;
+            }
+
+            #result {
+                font-size: 28px;
+            }
         }
     </style>
 </head>
@@ -185,8 +227,18 @@
             clearButton.disabled = true;
             statusDiv.textContent = '狀態: 正在辨識...';
 
-            await initAudio();
-            detectDTMF();
+            try {
+                await initAudio();
+                detectDTMF();
+            } catch (err) {
+                console.error('無法存取麥克風:', err);
+                resultDiv.textContent = '無法存取麥克風。請確認權限。';
+                statusDiv.textContent = '狀態: 錯誤';
+                isRunning = false;
+                startButton.disabled = false;
+                stopButton.disabled = true;
+                clearButton.disabled = false;
+            }
         }
 
         // 停止辨識
@@ -200,12 +252,15 @@
 
             if (microphone) {
                 microphone.disconnect();
+                microphone = null;
             }
             if (analyser) {
                 analyser.disconnect();
+                analyser = null;
             }
             if (audioContext) {
                 audioContext.close();
+                audioContext = null;
             }
         }
 
@@ -226,11 +281,11 @@
                     // 防止重複偵測相同按鍵
                     if (dtmf !== lastDetected && !detectionCooldown) {
                         lastDetected = dtmf;
-                        appendResult(dtmf);
+                        outputResult(dtmf);
                         // 如果偵測到 '#', 停止辨識
                         if (dtmf === '#') {
                             stopRecognition();
-                            appendResult('(結束)');
+                            outputResult('(結束)');
                         } else {
                             // 設定冷卻時間，避免重複偵測
                             detectionCooldown = true;
@@ -245,13 +300,9 @@
             requestAnimationFrame(detectDTMF);
         }
 
-        // 顯示辨識結果
-        function appendResult(dtmf) {
-            if (resultDiv.textContent === '尚未辨識') {
-                resultDiv.textContent = dtmf;
-            } else {
-                resultDiv.textContent += dtmf;
-            }
+        // 即時輸出辨識結果
+        function outputResult(dtmf) {
+            resultDiv.textContent = dtmf; // 直接顯示當前偵測到的字符
         }
 
         // 清除結果
