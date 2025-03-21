@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>手機模擬器 - 滑鼠模擬觸控操作</title>
+  <style>
+    /* 整體頁面設定黑色底色與白色文字 */
+    body {
+      background-color: black;
+      color: white;
+      font-family: Arial, sans-serif;
+      margin: 0;
+      padding: 20px;
+    }
+    /* 左右區塊採用彈性配置 */
+    .container {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+    }
+    .left-panel, .right-panel {
+      width: 45%;
+    }
+    /* 程式碼輸入區 */
+    textarea {
+      width: 100%;
+      height: 500px;
+      background: #333;
+      color: white;
+      border: 1px solid #555;
+      padding: 10px;
+      box-sizing: border-box;
+    }
+    /* 模擬器樣式 */
+    #simulator {
+      width: 375px;    /* 預設寬度 */
+      height: 667px;   /* 預設高度 */
+      border: 1px solid #ccc;
+      overflow: hidden;
+      margin-top: 20px;
+      background-color: white;
+      position: relative;
+    }
+    #simulator iframe {
+      width: 100%;
+      height: 100%;
+      border: none;
+    }
+    /* 控制項樣式 */
+    input[type="number"] {
+      width: 60px;
+      background: #333;
+      color: white;
+      border: 1px solid #555;
+      padding: 5px;
+      margin-left: 5px;
+    }
+    button {
+      background: #555;
+      border: none;
+      color: white;
+      padding: 2px 5px;
+      cursor: pointer;
+      margin-top: 10px;
+      margin-left: 10px;
+      border: 1px solid #ccc;
+
+    }
+    button:hover {
+      background: #0056b3;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <!-- 左側：程式碼輸入與控制區 -->
+    <div class="left-panel">
+      <p>請在下方輸入你的 HTML 程式碼，然後點擊「載入程式碼」來模擬手機顯示效果。</p>
+      <textarea id="codeInput"><!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>範例頁面</title>
+  <style>
+    body { font-family: Arial, sans-serif; text-align: center; }
+    h1 { color: #007bff; }
+  </style>
+</head>
+<body>
+  <h1>Hello, Mobile!</h1>
+  <p>這是一個範例頁面。</p>
+</body>
+</html></textarea>
+      <br>
+      <button id="loadCode">載入程式碼</button>
+      <div style="margin-top: 20px;">
+        <label>
+          寬度: 
+          <input type="number" id="widthInput" value="375">
+        </label>
+        <label>
+          高度: 
+          <input type="number" id="heightInput" value="667">
+        </label>
+        <button id="resizeSimulator">調整尺寸</button>
+      </div>
+    </div>
+    <!-- 右側：模擬手機顯示區 -->
+    <div class="right-panel">
+      <div id="simulator">
+        <iframe id="simulatorFrame"></iframe>
+      </div>
+    </div>
+  </div>
+  
+  <script>
+    // 載入使用者輸入的 HTML 程式碼到 iframe 中
+    document.getElementById('loadCode').addEventListener('click', function() {
+      var code = document.getElementById('codeInput').value;
+      var iframe = document.getElementById('simulatorFrame');
+      iframe.srcdoc = code;
+    });
+    
+    // 根據使用者設定的尺寸調整模擬器大小
+    document.getElementById('resizeSimulator').addEventListener('click', function() {
+      var width = document.getElementById('widthInput').value;
+      var height = document.getElementById('heightInput').value;
+      var simulator = document.getElementById('simulator');
+      simulator.style.width = width + 'px';
+      simulator.style.height = height + 'px';
+    });
+    
+    // 將滑鼠事件轉換成模擬的 Touch 事件
+    // 注意：這段程式碼需要在支援 TouchEvent 建構子的環境下才有效
+    function createTouch(x, y, target) {
+      return new Touch({
+        identifier: 0,
+        target: target,
+        clientX: x,
+        clientY: y,
+        screenX: x,
+        screenY: y,
+        pageX: x,
+        pageY: y
+      });
+    }
+    
+    function createTouchEvent(type, x, y, target) {
+      var touch = createTouch(x, y, target);
+      return new TouchEvent(type, {
+        cancelable: true,
+        bubbles: true,
+        touches: (type === 'touchend') ? [] : [touch],
+        targetTouches: (type === 'touchend') ? [] : [touch],
+        changedTouches: [touch]
+      });
+    }
+    
+    // 取得模擬器容器
+    var simulator = document.getElementById('simulator');
+    
+    // 將滑鼠事件轉為觸控事件並派送到 iframe 內的文件
+    function dispatchTouchEvent(type, e) {
+      e.preventDefault();
+      var rect = simulator.getBoundingClientRect();
+      var x = e.clientX - rect.left;
+      var y = e.clientY - rect.top;
+      var iframe = document.getElementById('simulatorFrame');
+      var target = iframe.contentDocument ? iframe.contentDocument.body : null;
+      if (target) {
+        var touchEvent = createTouchEvent(type, x, y, target);
+        target.dispatchEvent(touchEvent);
+      }
+    }
+    
+    simulator.addEventListener('mousedown', function(e) {
+      dispatchTouchEvent('touchstart', e);
+    });
+    
+    simulator.addEventListener('mousemove', function(e) {
+      // 只有按下狀態下才模擬 touchmove
+      if (e.buttons === 1) {
+        dispatchTouchEvent('touchmove', e);
+      }
+    });
+    
+    simulator.addEventListener('mouseup', function(e) {
+      dispatchTouchEvent('touchend', e);
+    });
+  </script>
+</body>
+</html>
