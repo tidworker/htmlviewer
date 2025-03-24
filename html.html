@@ -1,194 +1,251 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>簡易程式碼編輯器</title>
+  <meta charset="UTF-8">
+  <title>手機模擬器 - 滑鼠模擬觸控操作</title>
   <style>
+    /* 整體頁面設定黑色底色與白色文字 */
     body {
-      margin: 0;
-      padding: 0;
       background-color: black;
       color: white;
-      height: 100vh;
-      overflow: hidden;
-      font-family: monospace;
+      font-family: Arial, sans-serif;
+      margin: 0;
+      padding: 20px;
     }
-    /* 編輯器：整個畫面皆為可編輯區 */
-    #editor {
+    /* 左右區塊採用彈性配置 */
+    .container {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+    }
+    .left-panel, .right-panel {
+      width: 45%;
+    }
+    /* 程式碼輸入區 */
+    textarea {
       width: 100%;
-      height: 100%;
-      outline: none;
+      height: 500px;
+      background: #333;
+      color: white;
+      border: 1px solid #555;
       padding: 10px;
       box-sizing: border-box;
     }
-    /* 長按後顯示的選單，內部四個按鈕以隱藏方式呈現 */
-    #overlayMenu {
-      position: absolute;
-      display: none;
-      z-index: 1000;
-      width: 0;
-      height: 0;
+    /* 模擬器樣式 */
+    #simulator {
+      width: 375px;    /* 預設寬度 */
+      height: 667px;   /* 預設高度 */
+      border: 1px solid #ccc;
+      overflow: hidden;
+      margin-top: 20px;
+      background-color: white;
+      position: relative;
     }
-    .menu-button {
-      width: 50px;
-      height: 50px;
-      background-color: rgba(255, 255, 255, 0.1);
-      border-radius: 50%;
-      position: absolute;
-      /* 無內部文字 */
+    #simulator iframe {
+      width: 100%;
+      height: 100%;
+      border: none;
     }
-    /* 四個按鈕的位置（相對於 overlayMenu 中心點） */
-    #menu-up    { top: -60px; left: 50%; transform: translateX(-50%); }
-    #menu-down  { bottom: -60px; left: 50%; transform: translateX(-50%); }
-    #menu-left  { left: -60px; top: 50%; transform: translateY(-50%); }
-    #menu-right { right: -60px; top: 50%; transform: translateY(-50%); }
-    
-    /* 尋找輸入區 */
-    #findContainer {
+    /* 畫圖用的 canvas 覆蓋層 */
+    #drawCanvas {
       position: absolute;
-      bottom: 20px;
-      left: 50%;
-      transform: translateX(-50%);
-      display: none;
+      top: 0;
+      left: 0;
+      z-index: 2;
+      /* canvas 大小由程式動態調整 */
     }
-    #findInput {
+    /* 控制項樣式 */
+    input[type="number"] {
+      width: 60px;
+      background: #333;
+      color: white;
+      border: 1px solid #555;
       padding: 5px;
-      font-size: 16px;
+      margin-left: 5px;
     }
-    .find-arrow {
+    button {
+      background: #555;
+      border: none;
+      color: white;
+      padding: 2px 5px;
       cursor: pointer;
-      padding: 5px;
-      /* 僅使用箭頭符號，不加文字 */
+      margin-top: 10px;
+      margin-left: 10px;
+      border: 1px solid #ccc;
+    }
+    button:hover {
+      background: #0056b3;
     }
   </style>
 </head>
 <body>
-  <!-- 可編輯區 -->
-  <div id="editor" contenteditable="true"></div>
-  
-  <!-- 長按選單（無文字按鈕） -->
-  <div id="overlayMenu">
-    <div id="menu-up" class="menu-button"></div>
-    <div id="menu-down" class="menu-button"></div>
-    <div id="menu-left" class="menu-button"></div>
-    <div id="menu-right" class="menu-button"></div>
-  </div>
-  
-  <!-- 尋找輸入區，包含輸入框與上下箭頭（用符號呈現） -->
-  <div id="findContainer">
-    <input type="text" id="findInput">
-    <span id="findPrev" class="find-arrow">&#8593;</span>
-    <span id="findNext" class="find-arrow">&#8595;</span>
+  <div class="container">
+    <!-- 左側：程式碼輸入與控制區 -->
+    <div class="left-panel">
+      <p>請在下方輸入你的 HTML 程式碼，然後點擊「載入程式碼」來模擬手機顯示效果。</p>
+      <textarea id="codeInput"><!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>範例頁面</title>
+  <style>
+    body { font-family: Arial, sans-serif; text-align: center; }
+    h1 { color: #007bff; }
+  </style>
+</head>
+<body>
+  <h1>Hello, Mobile!</h1>
+  <p>這是一個範例頁面。</p>
+</body>
+</html></textarea>
+      <br>
+      <button id="loadCode">載入程式碼</button>
+      <div style="margin-top: 20px;">
+        <label>
+          寬度: 
+          <input type="number" id="widthInput" value="375">
+        </label>
+        <label>
+          高度: 
+          <input type="number" id="heightInput" value="667">
+        </label>
+        <button id="resizeSimulator">調整尺寸</button>
+      </div>
+    </div>
+    <!-- 右側：模擬手機顯示區 -->
+    <div class="right-panel">
+      <div id="simulator">
+        <iframe id="simulatorFrame"></iframe>
+        <!-- 新增 canvas 作為繪圖層 -->
+        <canvas id="drawCanvas"></canvas>
+      </div>
+    </div>
   </div>
   
   <script>
-    const editor = document.getElementById('editor');
-    const overlayMenu = document.getElementById('overlayMenu');
-    const findContainer = document.getElementById('findContainer');
-    const findInput = document.getElementById('findInput');
+    // 載入使用者輸入的 HTML 程式碼到 iframe 中
+    document.getElementById('loadCode').addEventListener('click', function() {
+      var code = document.getElementById('codeInput').value;
+      var iframe = document.getElementById('simulatorFrame');
+      iframe.srcdoc = code;
+    });
     
-    let longPressTimer;
-    let touchStartX, touchStartY;
-    const longPressDuration = 500; // 長按 500 毫秒
-    let menuVisible = false;
+    // 根據使用者設定的尺寸調整模擬器大小，並同步調整 canvas 尺寸
+    document.getElementById('resizeSimulator').addEventListener('click', function() {
+      var width = document.getElementById('widthInput').value;
+      var height = document.getElementById('heightInput').value;
+      var simulator = document.getElementById('simulator');
+      simulator.style.width = width + 'px';
+      simulator.style.height = height + 'px';
+      
+      var canvas = document.getElementById('drawCanvas');
+      canvas.width = simulator.clientWidth;
+      canvas.height = simulator.clientHeight;
+    });
     
-    // 顯示長按選單於觸碰點
-    function showMenu(x, y) {
-      overlayMenu.style.left = x + 'px';
-      overlayMenu.style.top = y + 'px';
-      overlayMenu.style.display = 'block';
-      menuVisible = true;
-    }
-    function hideMenu() {
-      overlayMenu.style.display = 'none';
-      menuVisible = false;
-    }
+    // 初始化 canvas 尺寸（根據預設的 simulator 尺寸）
+    (function initCanvas() {
+      var simulator = document.getElementById('simulator');
+      var canvas = document.getElementById('drawCanvas');
+      canvas.width = simulator.clientWidth;
+      canvas.height = simulator.clientHeight;
+    })();
     
-    // 貼上：讀取剪貼簿內容並插入到編輯器中
-    function doPaste() {
-      navigator.clipboard.readText().then(text => {
-        document.execCommand('insertText', false, text);
-      }).catch(err => {
-        console.error('貼上失敗', err);
+    // 觸控事件模擬相關函式
+    function createTouch(x, y, target) {
+      return new Touch({
+        identifier: 0,
+        target: target,
+        clientX: x,
+        clientY: y,
+        screenX: x,
+        screenY: y,
+        pageX: x,
+        pageY: y
       });
     }
     
-    // 尋找功能：簡單統計關鍵字出現次數（僅示意）
-    function doFind(keyword) {
-      const content = editor.innerText;
-      const regex = new RegExp(keyword, 'g');
-      const matches = content.match(regex);
-      alert('找到 ' + (matches ? matches.length : 0) + ' 處');
+    function createTouchEvent(type, x, y, target) {
+      var touch = createTouch(x, y, target);
+      return new TouchEvent(type, {
+        cancelable: true,
+        bubbles: true,
+        touches: (type === 'touchend') ? [] : [touch],
+        targetTouches: (type === 'touchend') ? [] : [touch],
+        changedTouches: [touch]
+      });
     }
     
-    // 清空編輯器內容
-    function clearEditor() {
-      editor.innerHTML = '';
-    }
+    // 取得模擬器容器與 canvas
+    var simulator = document.getElementById('simulator');
+    var canvas = document.getElementById('drawCanvas');
+    var ctx = canvas.getContext('2d');
     
-    // 監聽觸控事件
-    editor.addEventListener('touchstart', function(e) {
-      if(e.touches.length === 1) {
-        touchStartX = e.touches[0].clientX;
-        touchStartY = e.touches[0].clientY;
-        longPressTimer = setTimeout(() => {
-          showMenu(touchStartX, touchStartY);
-        }, longPressDuration);
+    // 用於繪圖追蹤
+    var isDrawing = false;
+    var lastX = 0;
+    var lastY = 0;
+    
+    // 將滑鼠事件轉換成模擬的 Touch 事件並派送到 iframe 內的文件
+    function dispatchTouchEvent(type, e) {
+      e.preventDefault();
+      var rect = simulator.getBoundingClientRect();
+      var x = e.clientX - rect.left;
+      var y = e.clientY - rect.top;
+      var iframe = document.getElementById('simulatorFrame');
+      var target = iframe.contentDocument ? iframe.contentDocument.body : null;
+      if (target) {
+        var touchEvent = createTouchEvent(type, x, y, target);
+        target.dispatchEvent(touchEvent);
       }
+    }
+    
+    // 處理滑鼠事件：點擊、拖曳與塗寫
+    simulator.addEventListener('mousedown', function(e) {
+      // 模擬觸控事件
+      dispatchTouchEvent('touchstart', e);
+      
+      // 初始化繪圖動作
+      isDrawing = true;
+      var rect = simulator.getBoundingClientRect();
+      lastX = e.clientX - rect.left;
+      lastY = e.clientY - rect.top;
+      // 開始一條新的路徑
+      ctx.beginPath();
+      ctx.moveTo(lastX, lastY);
     });
     
-    editor.addEventListener('touchend', function(e) {
-      clearTimeout(longPressTimer);
-      // 若長按選單已出現，則根據滑動方向執行對應動作
-      if(menuVisible && e.changedTouches.length === 1) {
-        const touchEndX = e.changedTouches[0].clientX;
-        const touchEndY = e.changedTouches[0].clientY;
-        const dx = touchEndX - touchStartX;
-        const dy = touchEndY - touchStartY;
-        const absDx = Math.abs(dx);
-        const absDy = Math.abs(dy);
-        if(Math.max(absDx, absDy) > 30) { // 判斷滑動幅度
-          if(absDy > absDx) {
-            if(dy < 0) {
-              // 上滑：貼上
-              doPaste();
-            } else {
-              // 下滑：顯示尋找輸入欄
-              findContainer.style.display = 'block';
-              findInput.focus();
-            }
-          } else {
-            if(dx > 0) {
-              // 右滑：開啟新分頁（示範網頁）
-              window.open(location.href, '_blank');
-            } else {
-              // 左滑：清空編輯器
-              clearEditor();
-            }
-          }
+    simulator.addEventListener('mousemove', function(e) {
+      // 若按下狀態下才模擬 touchmove
+      if (e.buttons === 1) {
+        dispatchTouchEvent('touchmove', e);
+        
+        if (isDrawing) {
+          var rect = simulator.getBoundingClientRect();
+          var currentX = e.clientX - rect.left;
+          var currentY = e.clientY - rect.top;
+          // 畫線段
+          ctx.lineTo(currentX, currentY);
+          ctx.strokeStyle = 'rgba(0, 0, 0, 0)'; // 畫筆顏色，可自行調整
+          ctx.lineWidth = 2;
+          ctx.stroke();
+          lastX = currentX;
+          lastY = currentY;
         }
-        hideMenu();
       }
     });
     
-    editor.addEventListener('touchmove', function(e) {
-      clearTimeout(longPressTimer);
+    simulator.addEventListener('mouseup', function(e) {
+      dispatchTouchEvent('touchend', e);
+      isDrawing = false;
     });
     
-    // 當在尋找輸入欄按下 Enter 時執行尋找
-    findInput.addEventListener('keydown', function(e) {
-      if(e.key === 'Enter') {
-        doFind(findInput.value);
+    // 若滑鼠離開模擬器區域，也結束繪圖
+    simulator.addEventListener('mouseleave', function(e) {
+      if (isDrawing) {
+        dispatchTouchEvent('touchend', e);
+        isDrawing = false;
       }
-    });
-    
-    // 尋找輸入區上下箭頭功能（僅示意）
-    document.getElementById('findPrev').addEventListener('click', function() {
-      alert('上一個匹配');
-    });
-    document.getElementById('findNext').addEventListener('click', function() {
-      alert('下一個匹配');
     });
   </script>
 </body>
