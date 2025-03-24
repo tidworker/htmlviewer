@@ -2,26 +2,49 @@
 <html>
 <head>
   <meta charset="UTF-8">
-  <title>手機模擬器 - 滑鼠模擬觸控操作</title>
+  <title>手機模擬器 - 限定讀取BODY與CSS且物件置中</title>
   <style>
-    /* 整體頁面設定黑色底色與白色文字 */
+    /* 頁面基本樣式 */
     body {
-      background-color: black;
+      background-color: #222;
       color: white;
       font-family: Arial, sans-serif;
       margin: 0;
       padding: 20px;
+      text-align: center;
     }
-    /* 左右區塊採用彈性配置 */
+    /* 使用 flex 將所有主要區塊置中 */
     .container {
       display: flex;
-      justify-content: space-between;
-      align-items: flex-start;
+      flex-wrap: wrap;
+      gap: 20px;
+      justify-content: center;
+      align-items: center;
     }
     .left-panel, .right-panel {
-      width: 45%;
+      flex: 1 1 45%;
+      max-width: 600px;
+      min-width: 300px;
     }
-    /* 程式碼輸入區 */
+    /* 程式碼輸入區及控制按鈕 */
+    .code-container {
+      text-align: left;
+    }
+    .btn-group {
+      margin-bottom: 5px;
+    }
+    .btn-group button {
+      background: #555;
+      border: 1px solid #ccc;
+      color: white;
+      padding: 5px 8px;
+      cursor: pointer;
+      margin-right: 5px;
+      font-size: 14px;
+    }
+    .btn-group button:hover {
+      background: #0056b3;
+    }
     textarea {
       width: 100%;
       height: 500px;
@@ -30,51 +53,38 @@
       border: 1px solid #555;
       padding: 10px;
       box-sizing: border-box;
+      resize: vertical;
     }
-    /* 模擬器樣式 */
+    /* 模擬器區塊 */
     #simulator {
-      width: 375px;    /* 預設寬度 */
-      height: 667px;   /* 預設高度 */
+      width: 375px;
+      height: 667px;
       border: 1px solid #ccc;
       overflow: hidden;
-      margin-top: 20px;
       background-color: white;
       position: relative;
+      margin: 20px auto;
     }
     #simulator iframe {
       width: 100%;
       height: 100%;
       border: none;
     }
-    /* 畫圖用的 canvas 覆蓋層 */
+    /* canvas 為繪圖用，但設定 pointer-events 讓事件穿透 */
     #drawCanvas {
       position: absolute;
       top: 0;
       left: 0;
       z-index: 2;
-      /* canvas 大小由程式動態調整 */
+      pointer-events: none;
     }
-    /* 控制項樣式 */
-    input[type="number"] {
-      width: 60px;
-      background: #333;
-      color: white;
-      border: 1px solid #555;
-      padding: 5px;
-      margin-left: 5px;
+    /* 尺寸調整區 */
+    .size-group {
+      margin-top: 20px;
+      text-align: left;
     }
-    button {
-      background: #555;
-      border: none;
-      color: white;
-      padding: 2px 5px;
-      cursor: pointer;
-      margin-top: 10px;
-      margin-left: 10px;
-      border: 1px solid #ccc;
-    }
-    button:hover {
-      background: #0056b3;
+    .size-group label {
+      margin-right: 10px;
     }
   </style>
 </head>
@@ -82,55 +92,99 @@
   <div class="container">
     <!-- 左側：程式碼輸入與控制區 -->
     <div class="left-panel">
-      <p>請在下方輸入你的 HTML 程式碼，然後點擊「載入程式碼」來模擬手機顯示效果。</p>
-      <textarea id="codeInput"><!DOCTYPE html>
-<html>
+      <p>請在下方輸入程式碼（可包含 PHP 區塊），載入時將只讀取 CSS 與 BODY 的內容。</p>
+      <div class="code-container">
+        <!-- 控制按鈕放在編輯框上方 -->
+        <div class="btn-group">
+          <button id="loadCode">載入程式碼</button>
+          <button id="pasteCode">貼上</button>
+          <button id="clearCode">清除</button>
+        </div>
+        <textarea id="codeInput"><?php
+// 範例 PHP 區塊，將被過濾掉。
+?>
+<!DOCTYPE html>
+<html lang="zh-TW">
 <head>
   <meta charset="UTF-8">
-  <title>範例頁面</title>
+  <title>Hello Word</title>
   <style>
-    body { font-family: Arial, sans-serif; text-align: center; }
-    h1 { color: #007bff; }
+    html, body {
+      height: 100%;
+      margin: 0;
+    }
+    body {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      font-family: Arial, sans-serif;
+      background: black;
+      color: white;
+    }
   </style>
 </head>
 <body>
-  <h1>Hello, Mobile!</h1>
-  <p>這是一個範例頁面。</p>
+  <h1>Hello Word !</h1>
 </body>
-</html></textarea>
-      <br>
-      <button id="loadCode">載入程式碼</button>
-      <div style="margin-top: 20px;">
-        <label>
-          寬度: 
+</html>
+        </textarea>
+      </div>
+      <div class="size-group">
+        <label>寬度:
           <input type="number" id="widthInput" value="375">
         </label>
-        <label>
-          高度: 
+        <label>高度:
           <input type="number" id="heightInput" value="667">
         </label>
         <button id="resizeSimulator">調整尺寸</button>
       </div>
     </div>
-    <!-- 右側：模擬手機顯示區 -->
+    <!-- 右側：模擬器顯示區 -->
     <div class="right-panel">
       <div id="simulator">
         <iframe id="simulatorFrame"></iframe>
-        <!-- 新增 canvas 作為繪圖層 -->
         <canvas id="drawCanvas"></canvas>
       </div>
     </div>
   </div>
   
   <script>
-    // 載入使用者輸入的 HTML 程式碼到 iframe 中
+    // 載入程式碼：過濾 PHP 區塊，僅取得 <style> 與 <body> 內容
     document.getElementById('loadCode').addEventListener('click', function() {
       var code = document.getElementById('codeInput').value;
-      var iframe = document.getElementById('simulatorFrame');
-      iframe.srcdoc = code;
+      var filteredCode = code.replace(/<\?php[\s\S]*?\?>/g, '');
+      var parser = new DOMParser();
+      var doc = parser.parseFromString(filteredCode, "text/html");
+      
+      var styles = '';
+      doc.querySelectorAll("style").forEach(function(styleElem) {
+        styles += styleElem.outerHTML;
+      });
+      var bodyContent = doc.body ? doc.body.innerHTML : '';
+      var finalContent = "<!DOCTYPE html><html><head>" + styles + "</head><body>" + bodyContent + "</body></html>";
+      
+      document.getElementById('simulatorFrame').srcdoc = finalContent;
     });
     
-    // 根據使用者設定的尺寸調整模擬器大小，並同步調整 canvas 尺寸
+    // 貼上按鈕：從剪貼簿讀取文字並插入至 textarea（需要使用者允許權限）
+    document.getElementById('pasteCode').addEventListener('click', function() {
+      if(navigator.clipboard && navigator.clipboard.readText) {
+        navigator.clipboard.readText().then(text => {
+          document.getElementById('codeInput').value = text;
+        }).catch(err => {
+          alert("貼上失敗：" + err);
+        });
+      } else {
+        alert("您的瀏覽器不支援自動貼上功能，請手動貼上。");
+      }
+    });
+    
+    // 清除按鈕：清空程式碼編輯區
+    document.getElementById('clearCode').addEventListener('click', function() {
+      document.getElementById('codeInput').value = "";
+    });
+    
+    // 調整模擬器尺寸及同步 canvas 大小
     document.getElementById('resizeSimulator').addEventListener('click', function() {
       var width = document.getElementById('widthInput').value;
       var height = document.getElementById('heightInput').value;
@@ -143,110 +197,13 @@
       canvas.height = simulator.clientHeight;
     });
     
-    // 初始化 canvas 尺寸（根據預設的 simulator 尺寸）
+    // 初始化 canvas 尺寸
     (function initCanvas() {
       var simulator = document.getElementById('simulator');
       var canvas = document.getElementById('drawCanvas');
       canvas.width = simulator.clientWidth;
       canvas.height = simulator.clientHeight;
     })();
-    
-    // 觸控事件模擬相關函式
-    function createTouch(x, y, target) {
-      return new Touch({
-        identifier: 0,
-        target: target,
-        clientX: x,
-        clientY: y,
-        screenX: x,
-        screenY: y,
-        pageX: x,
-        pageY: y
-      });
-    }
-    
-    function createTouchEvent(type, x, y, target) {
-      var touch = createTouch(x, y, target);
-      return new TouchEvent(type, {
-        cancelable: true,
-        bubbles: true,
-        touches: (type === 'touchend') ? [] : [touch],
-        targetTouches: (type === 'touchend') ? [] : [touch],
-        changedTouches: [touch]
-      });
-    }
-    
-    // 取得模擬器容器與 canvas
-    var simulator = document.getElementById('simulator');
-    var canvas = document.getElementById('drawCanvas');
-    var ctx = canvas.getContext('2d');
-    
-    // 用於繪圖追蹤
-    var isDrawing = false;
-    var lastX = 0;
-    var lastY = 0;
-    
-    // 將滑鼠事件轉換成模擬的 Touch 事件並派送到 iframe 內的文件
-    function dispatchTouchEvent(type, e) {
-      e.preventDefault();
-      var rect = simulator.getBoundingClientRect();
-      var x = e.clientX - rect.left;
-      var y = e.clientY - rect.top;
-      var iframe = document.getElementById('simulatorFrame');
-      var target = iframe.contentDocument ? iframe.contentDocument.body : null;
-      if (target) {
-        var touchEvent = createTouchEvent(type, x, y, target);
-        target.dispatchEvent(touchEvent);
-      }
-    }
-    
-    // 處理滑鼠事件：點擊、拖曳與塗寫
-    simulator.addEventListener('mousedown', function(e) {
-      // 模擬觸控事件
-      dispatchTouchEvent('touchstart', e);
-      
-      // 初始化繪圖動作
-      isDrawing = true;
-      var rect = simulator.getBoundingClientRect();
-      lastX = e.clientX - rect.left;
-      lastY = e.clientY - rect.top;
-      // 開始一條新的路徑
-      ctx.beginPath();
-      ctx.moveTo(lastX, lastY);
-    });
-    
-    simulator.addEventListener('mousemove', function(e) {
-      // 若按下狀態下才模擬 touchmove
-      if (e.buttons === 1) {
-        dispatchTouchEvent('touchmove', e);
-        
-        if (isDrawing) {
-          var rect = simulator.getBoundingClientRect();
-          var currentX = e.clientX - rect.left;
-          var currentY = e.clientY - rect.top;
-          // 畫線段
-          ctx.lineTo(currentX, currentY);
-          ctx.strokeStyle = 'rgba(0, 0, 0, 0)'; // 畫筆顏色，可自行調整
-          ctx.lineWidth = 2;
-          ctx.stroke();
-          lastX = currentX;
-          lastY = currentY;
-        }
-      }
-    });
-    
-    simulator.addEventListener('mouseup', function(e) {
-      dispatchTouchEvent('touchend', e);
-      isDrawing = false;
-    });
-    
-    // 若滑鼠離開模擬器區域，也結束繪圖
-    simulator.addEventListener('mouseleave', function(e) {
-      if (isDrawing) {
-        dispatchTouchEvent('touchend', e);
-        isDrawing = false;
-      }
-    });
   </script>
 </body>
 </html>
