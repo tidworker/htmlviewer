@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8">
+  <title>PDF 轉換程式 - 第一頁顯示</title>
+  <style>
+    body {
+      font-family: sans-serif;
+      margin: 20px;
+    }
+    #pdf-container {
+      margin-top: 20px;
+      border: 1px solid #ccc;
+      padding: 10px;
+      text-align: center;
+    }
+    canvas {
+      border: 1px solid #333;
+    }
+    button {
+      padding: 8px 16px;
+      font-size: 16px;
+      margin-top: 10px;
+      cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+  <h1>PDF 轉換程式</h1>
+  <p>請選擇一個 PDF 檔案，然後按下「轉換」按鈕，程式將讀取並呈現第一頁的內容。</p>
+  
+  <input type="file" id="pdf-file" accept="application/pdf">
+  <br>
+  <button id="convert-btn">轉換</button>
+  
+  <div id="pdf-container">
+    <!-- 轉換後的第一頁將會在這裡顯示 -->
+  </div>
+  
+  <!-- 載入 pdf.js 函式庫 -->
+  <script src="https://mozilla.github.io/pdf.js/build/pdf.js"></script>
+  <script>
+    // 設定 pdf.js 的 worker 路徑
+    pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://mozilla.github.io/pdf.js/build/pdf.worker.js';
+    
+    const fileInput = document.getElementById('pdf-file');
+    const convertBtn = document.getElementById('convert-btn');
+    const pdfContainer = document.getElementById('pdf-container');
+    
+    convertBtn.addEventListener('click', function() {
+      const file = fileInput.files[0];
+      if (!file) {
+        alert('請先選擇一個 PDF 檔案');
+        return;
+      }
+      if (file.type !== 'application/pdf') {
+        alert('請選擇正確的 PDF 檔案');
+        return;
+      }
+      
+      const fileReader = new FileReader();
+      fileReader.onload = function() {
+        const typedarray = new Uint8Array(this.result);
+        // 載入 PDF 檔案
+        pdfjsLib.getDocument(typedarray).promise.then(function(pdf) {
+          // 讀取第一頁
+          pdf.getPage(1).then(function(page) {
+            const scale = 1.5; // 可調整縮放比例
+            const viewport = page.getViewport({ scale: scale });
+            // 建立 canvas 元素
+            const canvas = document.createElement("canvas");
+            const context = canvas.getContext('2d');
+            canvas.height = viewport.height;
+            canvas.width = viewport.width;
+            
+            const renderContext = {
+              canvasContext: context,
+              viewport: viewport
+            };
+            // 渲染 PDF 頁面到 canvas
+            page.render(renderContext).promise.then(function() {
+              pdfContainer.innerHTML = "";
+              pdfContainer.appendChild(canvas);
+            });
+          });
+        }).catch(function(error){
+          console.error('讀取 PDF 失敗：', error);
+          alert('讀取 PDF 檔案時發生錯誤。');
+        });
+      };
+      fileReader.readAsArrayBuffer(file);
+    });
+  </script>
+</body>
+</html>
