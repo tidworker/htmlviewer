@@ -3,267 +3,303 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>純數字計分板</title>
-    
-    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs-core"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs-converter"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs-backend-webgl"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/pose-detection"></script>
-
+    <title>羽球自動計分</title>
     <style>
+        /* 基礎設定：純黑省電 */
         body {
-            margin: 0; padding: 0;
-            background-color: #000; /* 純黑背景 */
-            color: white;
-            font-family: 'Arial', sans-serif;
+            margin: 0;
+            height: 100vh;
+            background-color: #000000;
+            color: #444; /* 預設非發球方為暗灰 */
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            display: flex;
             overflow: hidden;
-            height: 100vh; width: 100vw;
-            user-select: none; -webkit-user-select: none;
-            display: flex; flex-direction: column;
-            justify-content: center; align-items: center;
+            user-select: none;
+            -webkit-user-select: none;
+            touch-action: manipulation;
         }
 
-        /* 隱藏相機與畫布，但保留在 DOM 中以供 AI 讀取 */
-        #hidden-layer {
-            position: absolute; width: 1px; height: 1px;
-            opacity: 0; pointer-events: none; overflow: hidden;
-        }
-
-        /* 分數顯示區 */
-        #score-container {
+        /* 左右分割佈局 */
+        .half {
+            flex: 1;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100%;
             position: relative;
-            z-index: 10;
-            text-align: center;
-        }
-
-        #score {
-            font-size: 35vh; /* 超大字體，佔視窗高度 35% */
-            font-weight: bold;
-            line-height: 1;
-            font-feature-settings: "tnum"; /* 等寬數字，避免數字跳動 */
-            transition: transform 0.1s;
-        }
-
-        /* 狀態指示燈 (因為看不到畫面，需要知道有沒有對準) */
-        #status-dot {
-            width: 20px; height: 20px;
-            background-color: #F44336; /* 預設紅色：沒人 */
-            border-radius: 50%;
-            margin: 0 auto 20px auto;
-            box-shadow: 0 0 10px rgba(255,255,255,0.2);
             transition: background-color 0.2s;
         }
 
-        /* 進度條 (顯示舉手進度) */
-        #progress-bar-container {
-            width: 80vw;
-            height: 10px;
-            background: #333;
-            border-radius: 5px;
-            margin-top: 40px;
-            overflow: hidden;
-        }
-        #progress-fill {
-            height: 100%; width: 0%;
-            background-color: #FFEB3B; /* 黃色進度 */
-            transition: width 0.1s linear;
+        /* 左側邊框 */
+        #area-left { border-right: 2px solid #222; }
+
+        /* 分數顯示 */
+        .score {
+            font-size: 40vw;
+            line-height: 1;
+            font-weight: bold;
+            transition: color 0.3s;
+            pointer-events: none;
         }
 
-        /* 文字提示 */
+        /* 發球方樣式 (高亮白色) */
+        .serving .score {
+            color: #ffffff;
+            text-shadow: 0 0 10px rgba(255,255,255,0.3);
+        }
+
+        /* 接球方樣式 (暗灰色) */
+        .receiving .score {
+            color: #333333;
+        }
+
+        /* 中央狀態燈 */
+        #status-dot {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 12px;
+            height: 12px;
+            background-color: #222;
+            border-radius: 50%;
+            z-index: 10;
+            transition: background-color 0.3s, box-shadow 0.3s;
+        }
+
+        #status-dot.active {
+            background-color: #00ff00;
+            box-shadow: 0 0 15px #00ff00;
+        }
+
+        /* 底部提示 */
         #hint {
-            color: #666; font-size: 1rem; margin-top: 10px;
-        }
-
-        /* 啟動按鈕 */
-        #start-screen {
-            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: #000; z-index: 100;
-            display: flex; flex-direction: column;
-            justify-content: center; align-items: center;
-        }
-        #btn-go {
-            padding: 20px 50px; font-size: 2rem;
-            background: #fff; color: #000; border: none; border-radius: 100px;
-            cursor: pointer; font-weight: bold;
-        }
-
-        /* 得分動畫 */
-        .pop { transform: scale(1.2); color: #4CAF50 !important; }
-
-        /* 全螢幕雙擊提示 (隱藏式) */
-        #fs-hint {
-            position: absolute; bottom: 20px; color: #333; font-size: 0.8rem;
+            position: absolute;
+            bottom: 20px;
+            width: 100%;
+            text-align: center;
+            font-size: 0.9rem;
+            color: #333;
+            pointer-events: none;
+            transition: opacity 0.5s;
         }
     </style>
 </head>
 <body>
 
-    <div id="start-screen">
-        <button id="btn-go" onclick="init()">START</button>
-        <p style="color:#555; margin-top:20px;">相機將在背景運作</p>
+    <div id="status-dot"></div>
+
+    <div class="half receiving" id="area-left">
+        <div class="score" id="score-a">0</div>
     </div>
 
-    <div id="hidden-layer">
-        <video id="video" playsinline muted></video>
+    <div class="half receiving" id="area-right">
+        <div class="score" id="score-b">0</div>
     </div>
 
-    <div id="status-dot"></div> <div id="score-container">
-        <div id="score">0</div>
-    </div>
-
-    <div id="progress-bar-container">
-        <div id="progress-fill"></div>
-    </div>
-    
-    <div id="hint">未偵測到人員</div>
-    <div id="fs-hint">雙擊全螢幕</div>
+    <div id="hint">長按發球方開始 / 再次長按歸零</div>
 
     <script>
-        let detector;
-        let video;
-        let score = 0;
-        let holding = false;
-        let holdStart = 0;
-        const HOLD_TIME = 1500; // 1.5秒
+        const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+        const recognition = SpeechRecognition ? new SpeechRecognition() : null;
 
-        async function init() {
-            const btn = document.getElementById('btn-go');
-            btn.innerText = "準備中...";
-            btn.disabled = true;
-
-            try {
-                // 1. 雖然不顯示，但仍需請求相機
-                video = document.getElementById('video');
-                const stream = await navigator.mediaDevices.getUserMedia({
-                    audio: false,
-                    video: { facingMode: 'user' }
-                });
-                video.srcObject = stream;
-                await new Promise(r => video.onloadedmetadata = r);
-                video.play();
-
-                // 2. 載入極速版模型
-                await tf.setBackend('webgl');
-                detector = await poseDetection.createDetector(
-                    poseDetection.SupportedModels.MoveNet, 
-                    { modelType: poseDetection.movenet.modelType.SINGLEPOSE_LIGHTNING }
-                );
-
-                // 3. 進入介面
-                document.getElementById('start-screen').style.display = 'none';
-                loop();
-
-            } catch (e) {
-                alert("錯誤: " + e.message);
-                btn.innerText = "重試"; btn.disabled = false;
-            }
+        if (recognition) {
+            recognition.lang = 'cmn-Hant-TW'; // 台灣中文
+            recognition.continuous = true;
+            recognition.interimResults = false;
         }
 
-        async function loop() {
-            const poses = await detector.estimatePoses(video);
-            
-            // 邏輯處理
-            if (poses.length > 0) {
-                logic(poses[0]);
-            } else {
-                updateStatus(false, "未偵測到");
-            }
+        let scoreA = 0;
+        let scoreB = 0;
+        let server = null; // 'A', 'B', or null
+        let isListening = false;
+        let clickTimer = null;
+        let longPressTimer = null;
+        let longPressTriggered = false; // 避免長按後觸發點擊
 
-            requestAnimationFrame(loop);
-        }
+        const areaA = document.getElementById('area-left');
+        const areaB = document.getElementById('area-right');
+        const elA = document.getElementById('score-a');
+        const elB = document.getElementById('score-b');
+        const statusDot = document.getElementById('status-dot');
+        const hint = document.getElementById('hint');
 
-        function logic(pose) {
-            // 信心過低 = 沒人
-            if (pose.score < 0.25) {
-                updateStatus(false, "靠近一點");
-                return;
-            }
+        // --- 觸控邏輯 (長按開始/歸零) ---
 
-            const k = pose.keypoints;
-            const nose = k.find(p => p.name === 'nose');
-            
-            // 如果連鼻子都找不到，視為沒對準
-            if (!nose || nose.score < 0.3) {
-                updateStatus(false, "請面對鏡頭");
-                return;
-            }
-
-            // 找到了，亮綠燈
-            updateStatus(true, "偵測中...");
-
-            // 判斷舉手 (手腕 < 鼻子)
-            const lW = k.find(p => p.name === 'left_wrist');
-            const rW = k.find(p => p.name === 'right_wrist');
-            
-            let isUp = false;
-            // 寬鬆判定：只要有一手信心高且舉起
-            if ((lW && lW.score > 0.3 && lW.y < nose.y) || 
-                (rW && rW.score > 0.3 && rW.y < nose.y)) {
-                isUp = true;
-            }
-
-            const now = Date.now();
-            if (isUp) {
-                if (!holding) {
-                    holding = true;
-                    holdStart = now;
+        function handleTouchStart(team) {
+            longPressTriggered = false;
+            longPressTimer = setTimeout(() => {
+                longPressTriggered = true;
+                
+                // 長按邏輯判斷
+                if (server === null) {
+                    // 1. 如果尚未開始 (server是null) -> 設定發球方並開始
+                    startGame(team);
                 } else {
-                    // 計算進度
-                    const elapsed = now - holdStart;
-                    const pct = Math.min((elapsed / HOLD_TIME) * 100, 100);
-                    
-                    document.getElementById('progress-fill').style.width = pct + '%';
-                    document.getElementById('hint').innerText = "堅持住!";
-
-                    if (elapsed >= HOLD_TIME) {
-                        addScore();
-                        holding = false;
-                        holdStart = now + 500; // 冷卻
-                    }
+                    // 2. 如果已經開始 -> 結束並歸零
+                    resetGame();
                 }
-            } else {
-                holding = false;
-                document.getElementById('progress-fill').style.width = '0%';
-                document.getElementById('hint').innerText = "請舉手得分";
+                
+                // 震動回饋
+                if (navigator.vibrate) navigator.vibrate(80);
+
+            }, 800); // 長按 800ms 觸發
+        }
+
+        function handleTouchEnd() {
+            if (longPressTimer) {
+                clearTimeout(longPressTimer);
+                longPressTimer = null;
             }
         }
 
-        function addScore() {
-            score++;
-            const el = document.getElementById('score');
-            el.innerText = score;
-            el.classList.add('pop');
-            
-            // 震動
-            if (navigator.vibrate) navigator.vibrate(200);
+        // 點擊事件 (用於暫停/繼續)
+        function handleClick() {
+            if (longPressTriggered) return; // 如果剛剛是長按，忽略這次點擊
 
-            setTimeout(() => el.classList.remove('pop'), 200);
-            document.getElementById('progress-fill').style.width = '0%';
-        }
-
-        function updateStatus(isReady, msg) {
-            const dot = document.getElementById('status-dot');
-            const hint = document.getElementById('hint');
-            
-            hint.innerText = msg;
-            
-            if (isReady) {
-                dot.style.backgroundColor = '#4CAF50'; // 綠燈
-                dot.style.boxShadow = '0 0 15px #4CAF50';
-            } else {
-                dot.style.backgroundColor = '#F44336'; // 紅燈
-                dot.style.boxShadow = 'none';
-                // 沒人時歸零進度
-                holding = false;
-                document.getElementById('progress-fill').style.width = '0%';
+            if (clickTimer) {
+                clearTimeout(clickTimer);
+                clickTimer = null;
+                return; // 這是雙擊的一部分
             }
+
+            clickTimer = setTimeout(() => {
+                // 單擊邏輯：只有在遊戲進行中才允許手動暫停/繼續
+                if (server !== null) {
+                    toggleListening();
+                } else {
+                    flashHint("請先長按設定發球方");
+                }
+                clickTimer = null;
+            }, 250);
         }
+
+        // 綁定事件
+        ['mousedown', 'touchstart'].forEach(evt => {
+            areaA.addEventListener(evt, () => handleTouchStart('A'), {passive: true});
+            areaB.addEventListener(evt, () => handleTouchStart('B'), {passive: true});
+        });
+
+        ['mouseup', 'touchend'].forEach(evt => {
+            areaA.addEventListener(evt, handleTouchEnd);
+            areaB.addEventListener(evt, handleTouchEnd);
+        });
+
+        // 全局點擊處理
+        document.body.addEventListener('click', handleClick);
 
         // 雙擊全螢幕
-        document.addEventListener('dblclick', () => {
-             if(!document.fullscreenElement) document.documentElement.requestFullscreen().catch(()=>{});
-             else document.exitFullscreen();
+        document.body.addEventListener('dblclick', () => {
+            if (clickTimer) clearTimeout(clickTimer);
+            toggleFullScreen();
         });
+
+
+        // --- 遊戲邏輯 ---
+
+        function startGame(team) {
+            server = team;
+            updateColors();
+            startListening(); // 自動開始錄音
+            flashHint((team === 'A' ? "左邊" : "右邊") + " 發球 - 監聽中");
+        }
+
+        function resetGame() {
+            stopListening();
+            scoreA = 0;
+            scoreB = 0;
+            server = null;
+            elA.textContent = 0;
+            elB.textContent = 0;
+            updateColors();
+            flashHint("已歸零");
+        }
+
+        function updateColors() {
+            if (server === 'A') {
+                areaA.className = 'half serving';
+                areaB.className = 'half receiving';
+            } else if (server === 'B') {
+                areaA.className = 'half receiving';
+                areaB.className = 'half serving';
+            } else {
+                areaA.className = 'half receiving';
+                areaB.className = 'half receiving';
+            }
+        }
+
+        function addScore(winner) {
+            if (!server) return; // 沒開始前不計分
+
+            if (winner === 'A') {
+                scoreA++;
+                elA.textContent = scoreA;
+                highlight(elA, "#4ecdc4");
+                if (server === 'B') server = 'A'; // 換發
+            } else {
+                scoreB++;
+                elB.textContent = scoreB;
+                highlight(elB, "#ff6b6b");
+                if (server === 'A') server = 'B'; // 換發
+            }
+            updateColors();
+        }
+
+        function highlight(el, color) {
+            el.style.textShadow = `0 0 40px ${color}`;
+            setTimeout(() => el.style.textShadow = server === (el === elA ? 'A' : 'B') ? "0 0 10px rgba(255,255,255,0.3)" : "none", 400);
+        }
+
+        function flashHint(text) {
+            hint.innerText = text;
+            hint.style.opacity = 1;
+            setTimeout(() => hint.style.opacity = 0, 2500);
+        }
+
+        // --- 語音控制 ---
+
+        function startListening() {
+            if (!recognition) return;
+            try {
+                recognition.start();
+                isListening = true;
+                statusDot.classList.add('active');
+            } catch (e) {}
+        }
+
+        function stopListening() {
+            if (!recognition) return;
+            recognition.stop();
+            isListening = false;
+            statusDot.classList.remove('active');
+        }
+
+        function toggleListening() {
+            if (isListening) {
+                stopListening();
+                flashHint("已暫停");
+            } else {
+                startListening();
+                flashHint("繼續監聽");
+            }
+        }
+
+        if (recognition) {
+            recognition.onresult = (event) => {
+                const text = event.results[event.results.length - 1][0].transcript;
+                if (text.includes('左邊')) addScore('A');
+                else if (text.includes('右邊')) addScore('B');
+            };
+            recognition.onend = () => { if (isListening) recognition.start(); };
+        }
+
+        function toggleFullScreen() {
+            if (!document.fullscreenElement) {
+                document.documentElement.requestFullscreen().catch(()=>{});
+            } else {
+                if (document.exitFullscreen) document.exitFullscreen();
+            }
+        }
     </script>
 </body>
 </html>
