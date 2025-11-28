@@ -1,0 +1,329 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>AI 舉手計分板</title>
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs-core"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs-converter"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs-backend-webgl"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/pose-detection"></script>
+
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: #000;
+            color: white;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            overflow: hidden; /* 防止捲動 */
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            height: 100vh;
+        }
+
+        /* 影片與畫布層疊 */
+        #canvas-container {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        video {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            z-index: 1;
+            transform: scaleX(-1); /* 鏡像翻轉，像照鏡子一樣 */
+        }
+
+        canvas {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            z-index: 2;
+            transform: scaleX(-1);
+        }
+
+        /* UI 介面層 */
+        #ui-layer {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 10;
+            pointer-events: none; /* 讓點擊穿透 */
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+        }
+
+        .score-board {
+            text-align: center;
+            padding: 20px;
+            background: linear-gradient(to bottom, rgba(0,0,0,0.8), transparent);
+        }
+
+        .score-title {
+            font-size: 1.2rem;
+            color: #aaa;
+        }
+
+        #score {
+            font-size: 5rem;
+            font-weight: bold;
+            color: #4CAF50;
+            text-shadow: 0 0 10px #000;
+            transition: transform 0.2s;
+        }
+
+        .status-bar {
+            padding: 20px;
+            text-align: center;
+            background: linear-gradient(to top, rgba(0,0,0,0.8), transparent);
+        }
+
+        #status-text {
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: #fff;
+        }
+
+        /* 進度條樣式 */
+        #progress-container {
+            width: 80%;
+            height: 10px;
+            background-color: rgba(255,255,255,0.3);
+            border-radius: 5px;
+            margin: 10px auto;
+            overflow: hidden;
+            display: none; /* 預設隱藏 */
+        }
+
+        #progress-fill {
+            height: 100%;
+            width: 0%;
+            background-color: #FFD700;
+            transition: width 0.1s linear;
+        }
+
+        /* 讀取畫面 */
+        #loading {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            z-index: 20;
+            background: rgba(0,0,0,0.8);
+            padding: 20px;
+            border-radius: 10px;
+        }
+
+        /* 得分動畫 class */
+        .score-pop {
+            transform: scale(1.5);
+            color: #fff !important;
+        }
+    </style>
+</head>
+<body>
+
+    <div id="loading">正在啟動 AI 模型與相機...</div>
+
+    <div id="canvas-container">
+        <video id="video" playsinline></video>
+        <canvas id="output"></canvas>
+    </div>
+
+    <div id="ui-layer">
+        <div class="score-board">
+            <div class="score-title">目前得分</div>
+            <div id="score">0</div>
+        </div>
+        
+        <div class="status-bar">
+            <div id="progress-container">
+                <div id="progress-fill"></div>
+            </div>
+            <div id="status-text">準備中...</div>
+        </div>
+    </div>
+
+    <script>
+        let detector;
+        let video;
+        let canvas;
+        let ctx;
+        let score = 0;
+        
+        // 計時邏輯變數
+        let isHandRaised = false;
+        let handRaisedStartTime = 0;
+        const REQUIRED_DURATION = 2000; // 2秒
+        const COOLDOWN_DURATION = 1000; // 得分後冷卻時間
+        let lastScoreTime = 0;
+
+        async function setupCamera() {
+            video = document.getElementById('video');
+            const stream = await navigator.mediaDevices.getUserMedia({
+                'audio': false,
+                'video': {
+                    facingMode: 'user', // 使用前鏡頭
+                    width: 640,
+                    height: 480
+                }
+            });
+            video.srcObject = stream;
+            
+            return new Promise((resolve) => {
+                video.onloadedmetadata = () => {
+                    resolve(video);
+                };
+            });
+        }
+
+        async function init() {
+            await setupCamera();
+            video.play();
+
+            // 設定 Canvas 大小
+            canvas = document.getElementById('output');
+            ctx = canvas.getContext('2d');
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+
+            // 載入 MoveNet 模型 (Lightning 版本較快，適合手機)
+            const model = poseDetection.SupportedModels.MoveNet;
+            const detectorConfig = {
+                modelType: poseDetection.movenet.modelType.SINGLEPOSE_LIGHTNING
+            };
+            detector = await poseDetection.createDetector(model, detectorConfig);
+
+            document.getElementById('loading').style.display = 'none';
+            document.getElementById('status-text').innerText = "請舉起單手";
+
+            renderFrame();
+        }
+
+        async function renderFrame() {
+            // 1. 偵測姿態
+            const poses = await detector.estimatePoses(video);
+
+            // 清空畫布
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            // 2. 邏輯判斷
+            if (poses && poses.length > 0) {
+                const keypoints = poses[0].keypoints;
+                checkGesture(keypoints);
+                drawSkeleton(keypoints);
+            }
+
+            requestAnimationFrame(renderFrame);
+        }
+
+        function checkGesture(keypoints) {
+            const now = Date.now();
+            
+            // 如果剛得分完，進入冷卻期
+            if (now - lastScoreTime < COOLDOWN_DURATION) {
+                updateStatus("得分！", 0, true);
+                return;
+            }
+
+            // 取得關鍵點 (只有信心分數 > 0.3 才算數)
+            const nose = keypoints.find(k => k.name === 'nose' && k.score > 0.3);
+            const leftWrist = keypoints.find(k => k.name === 'left_wrist' && k.score > 0.3);
+            const rightWrist = keypoints.find(k => k.name === 'right_wrist' && k.score > 0.3);
+
+            if (!nose) return; // 沒抓到臉就不算
+
+            // 判斷是否舉手：手腕 Y 座標 < 鼻子 Y 座標 (Canvas 座標原點在左上，越上面 Y 越小)
+            // 這裡設定必須「顯著」高於鼻子 (例如鼻子位置再減去一些像素)
+            const threshold = nose.y; 
+
+            const isLeftUp = leftWrist && leftWrist.y < threshold;
+            const isRightUp = rightWrist && rightWrist.y < threshold;
+
+            // 邏輯：單手舉起 (可以用 OR，也可以嚴格限制 XOR，這裡使用 OR 比較好操作)
+            if (isLeftUp || isRightUp) {
+                if (!isHandRaised) {
+                    isHandRaised = true;
+                    handRaisedStartTime = now;
+                }
+
+                // 計算持續時間
+                const duration = now - handRaisedStartTime;
+                const progress = Math.min((duration / REQUIRED_DURATION) * 100, 100);
+                
+                updateStatus(`保持住... ${(duration/1000).toFixed(1)}s`, progress);
+
+                // 觸發得分
+                if (duration >= REQUIRED_DURATION) {
+                    addScore();
+                    // 重置狀態，避免連續得分
+                    isHandRaised = false;
+                    lastScoreTime = now;
+                }
+
+            } else {
+                // 手放下了
+                isHandRaised = false;
+                handRaisedStartTime = 0;
+                updateStatus("請舉起單手", 0);
+            }
+        }
+
+        function addScore() {
+            score++;
+            const scoreEl = document.getElementById('score');
+            scoreEl.innerText = score;
+            
+            // 視覺特效
+            scoreEl.classList.add('score-pop');
+            setTimeout(() => scoreEl.classList.remove('score-pop'), 200);
+            
+            // 可以加入音效 (如果瀏覽器允許)
+        }
+
+        function updateStatus(text, progressPercent, isSuccess = false) {
+            document.getElementById('status-text').innerText = text;
+            
+            const progContainer = document.getElementById('progress-container');
+            const progFill = document.getElementById('progress-fill');
+
+            if (progressPercent > 0 || isSuccess) {
+                progContainer.style.display = 'block';
+                progFill.style.width = progressPercent + '%';
+                progFill.style.backgroundColor = isSuccess ? '#4CAF50' : '#FFD700';
+            } else {
+                progContainer.style.display = 'none';
+                progFill.style.width = '0%';
+            }
+        }
+
+        function drawSkeleton(keypoints) {
+            // 簡單繪製關鍵點以便除錯和確認對準
+            ctx.fillStyle = 'red';
+            keypoints.forEach(point => {
+                if (point.score > 0.3) {
+                    ctx.beginPath();
+                    ctx.arc(point.x, point.y, 5, 0, 2 * Math.PI);
+                    ctx.fill();
+                }
+            });
+        }
+
+        // 啟動程式
+        init();
+
+    </script>
+</body>
+</html>
